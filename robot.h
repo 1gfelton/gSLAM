@@ -21,7 +21,7 @@ struct Robot{
     void print() const;
 
     // move in a direction with some magnitude
-    void move_in_direction(Eigen::Vector2f dir, float mag);
+    void move_in_direction(float mag);
 };
 
 #endif

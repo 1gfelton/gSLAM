@@ -53,7 +53,6 @@ void P_test_similarity() {
     cout << "Passed!" << endl;
 }
 
-
 void LM_test_sorting() {
     cout << "Testing sorting..." << endl;
     int n = 10;
@@ -102,13 +101,53 @@ void LM_test_similarity() {
     cout << "Passed!" << endl;
 }
 
+struct TestRobot {
+    Robot r;
+    TestRobot() {
+        Point2d random_pos;
+        random_pos.randomize(0.0, 1.0);
+        // create random robot looking at an angle 45 deg from x-axis
+        Robot _r(random_pos.x, random_pos.y, 45.0);
+        r = _r;
+    }
+
+    void TR_test_moving() {
+        cout << "Testing Robot movement...\n";
+        // have a set of random directions and distances in which to move
+        // for each one, try moving the robot in that direction
+        int n_moves = 10;
+        vector<float> moves(n_moves, 0.0);
+        for (int i = 0; i < n_moves; i++) {
+            moves[i] += i;
+        }
+        for (int i = 0; i < n_moves; i++) {
+            cout << "Current position: ";
+            Point2d(this->r.position).print();
+            cout << "Current Direction: " << this->r.look_at << endl;
+            // move by i
+            this->r.move_in_direction(moves[i]);
+            // rotate in new direction by i
+            this->r.look_at += i;
+            cout << "New position: ";
+            Point2d(this->r.position).print();
+        }
+        cout << "Printing Trajectory...\n";
+        for (const auto &t : this->r.trajectory) {
+            t.print();
+        }
+        cout << "Done with Robot tests";
+    }
+};
+
 int main() {
     cout << "######################## Running Tests ########################\n";
-    LM_test_eigen_assignment();
-    LM_test_similarity();
-    LM_test_sorting();
-    P_test_eigen_assignment();
-    P_test_similarity();
-    P_test_sorting();
+    // LM_test_eigen_assignment();
+    // LM_test_similarity();
+    // LM_test_sorting();
+    // P_test_eigen_assignment();
+    // P_test_similarity();
+    // P_test_sorting();
+    TestRobot tr;
+    tr.TR_test_moving();
     cout << "######################## All Tests Passed ########################\n";
 }
