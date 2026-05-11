@@ -19,7 +19,7 @@ void Landmark::randomize(const float &lower_bound, const float &upper_bound) {
 
 // Print a Landmark to console
 void Landmark::print() const {
-    std::cout << "Landmark: (" << x << ", " << y << ")\n";
+    std::cout << "Landmark: (" << position.x() << ", " << position.y() << ")\n";
 }
 
 bool operator<(const Landmark& a, const Landmark& b) {

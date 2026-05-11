@@ -27,5 +27,5 @@ void Robot::move_in_direction(float dist) {
 
 // Print utility
 void Robot::print() const {
-    cout << "Robot at: (" << x << ", " << y << ")\n";
+    cout << "Robot at: (" << position.x() << ", " << position.y() << ")\n";
 }

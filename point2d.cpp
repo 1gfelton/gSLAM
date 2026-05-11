@@ -17,7 +17,7 @@ void Point2d::randomize(const float &lower_bound, const float &upper_bound) {
 }
 
 void Point2d::print() const {
-    std::cout << "Point2d: (" << x << ", " << y << ")\n";
+    std::cout << "Point2d: (" << position.x() << ", " << position.y() << ")\n";
 }
 
 bool operator<(const Point2d& a, const Point2d& b) {
