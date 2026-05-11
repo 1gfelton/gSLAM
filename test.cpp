@@ -121,21 +121,20 @@ struct TestRobot {
             moves[i] += i;
         }
         for (int i = 0; i < n_moves; i++) {
-            cout << "Current position: ";
-            Point2d(this->r.position).print();
-            cout << "Current Direction: " << this->r.look_at << endl;
             // move by i
             this->r.move_in_direction(moves[i]);
             // rotate in new direction by i
             this->r.look_at += i;
-            cout << "New position: ";
-            Point2d(this->r.position).print();
         }
         cout << "Printing Trajectory...\n";
         for (const auto &t : this->r.trajectory) {
             t.print();
         }
         cout << "Done with Robot tests";
+    }
+
+    void run_tests() {
+        this->TR_test_moving();
     }
 };
 
@@ -148,6 +147,6 @@ int main() {
     // P_test_similarity();
     // P_test_sorting();
     TestRobot tr;
-    tr.TR_test_moving();
+    tr.run_tests();
     cout << "######################## All Tests Passed ########################\n";
 }

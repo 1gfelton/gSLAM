@@ -68,12 +68,11 @@ void Robot::move_in_direction(float dist) {
     move to `look_at` some distance `dist`
     */
     double in_radians = to_radians((double)this->look_at);
-    // cout << "Look at: " << this->look_at << " radians: " << in_radians << std::endl;
-    this->position.x() += dist * cosd(in_radians);
-    this->position.y() += dist * sind(in_radians);
+    Eigen::Vector2f delta = {dist * cosd(in_radians), dist * sind(in_radians)};
+    this->position += delta;
+
     // now add this new direction to the trajectory
     this->trajectory.push_back(Point2d(this->position.x(), this->position.y()));
-    // cout << "Position: " << this->position << std::endl;
 }
 
 // Print utility
