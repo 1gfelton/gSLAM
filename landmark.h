@@ -22,7 +22,7 @@ struct Landmark {
 
     float x;
     float y;
-    Eigen::Vector2f coords;
+    Eigen::Vector2f position;
 
     // Assign random values
     void randomize(const float &lower_bound, const float &upper_bound);

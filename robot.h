@@ -2,6 +2,7 @@
 #define ROBOT_H
 
 #include "landmark.h"
+#include "point2d.h"
 #include <vector>
 #include <Eigen/Dense>
 
@@ -13,13 +14,14 @@ struct Robot{
     Robot();
     Robot(const float _x, const float _y);
     Robot(const float _x, const float _y, const float _look_at);
-    Robot(const std::vector<Landmark> t);
+    Robot(const std::vector<Point2d> t);
     float x; float y; float look_at;
-    std::vector<Landmark> trajectory;
+    Eigen::Vector2f position;
+    std::vector<Point2d> trajectory;
     void print() const;
 
     // move in a direction with some magnitude
-    void move_in_direction();
+    void move_in_direction(Eigen::Vector2f dir, float mag);
 };
 
 #endif

@@ -36,7 +36,7 @@ void P_test_eigen_assignment() {
         ll.randomize(0.0, 1.0);
         L[i] = ll;
         ll.print();
-        cout << "Coords: " << ll.coords << '\n';
+        cout << "position: " << ll.position << '\n';
     }
     cout << "Passed!" << endl;
 }
@@ -85,7 +85,7 @@ void LM_test_eigen_assignment() {
         ll.randomize(0.0, 1.0);
         L[i] = ll;
         ll.print();
-        cout << "Coords: " << ll.coords << '\n';
+        cout << "position: " << ll.position << '\n';
     }
     cout << "Passed!" << endl;
 }

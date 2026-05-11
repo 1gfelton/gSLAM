@@ -14,7 +14,7 @@ struct Point2d {
     Point2d(Eigen::Vector2f _v);
 
     float x; float y;
-    Eigen::Vector2f coords;
+    Eigen::Vector2f position;
 
     void randomize(const float &lower_bound, const float &upper_bound);
     void print() const;
