@@ -1,3 +1,4 @@
+#include "world.h"
 #include "landmark.h"
 #include "point2d.h"
 #include "robot.h"
@@ -122,15 +123,22 @@ struct TestRobot {
         }
         for (int i = 0; i < n_moves; i++) {
             // move by i
+            cout << "Moving by magnitude " << moves[i] << endl;
             this->r.move_in_direction(moves[i]);
             // rotate in new direction by i
+            cout << "Rotating by " << this->r.look_at + i << endl;
             this->r.look_at += i;
+            this->r.print();
         }
+        this->printj();
+        cout << "Done with Robot tests";
+    }
+    void printj() const {
         cout << "Printing Trajectory...\n";
         for (const auto &t : this->r.trajectory) {
             t.print();
         }
-        cout << "Done with Robot tests";
+        cout << endl;
     }
 
     void run_tests() {
@@ -138,15 +146,50 @@ struct TestRobot {
     }
 };
 
+struct TestWorld {
+    World w;
+    int n_landmarks = 50;
+    TestWorld() {
+        Point2d random_pos;
+        random_pos.randomize(0.0, 1.0);
+        // create random robot looking at an angle 45 deg from x-axis
+        Robot _r(random_pos.x, random_pos.y, 45.0);
+        w.robot = _r;
+        // add a bunch of random landmarks
+        for (int i = 0; i < n_landmarks; i++) {
+            Landmark lm;
+            lm.randomize(-20.0, 20.0);
+            w.landmarks.push_back(lm);
+        }
+    }
+
+    void simple_test() {
+        cout << "Testing world creation and printing of landmarks...\n";
+        w.printlm();
+    }
+
+    void test_robot() {
+        cout << "Testing world robot...\n";
+        w.robot.print();
+        float mag = 10.0;
+        cout << "Moving robot " << mag << " dist in direction " << w.robot.look_at << endl;
+        w.robot.move_in_direction(mag);
+        cout << "New location:\n";
+        w.robot.print();
+    }
+
+    void run_tests() {
+        this->simple_test();
+        this->test_robot();
+    }
+};
+
 int main() {
     cout << "######################## Running Tests ########################\n";
-    // LM_test_eigen_assignment();
-    // LM_test_similarity();
-    // LM_test_sorting();
-    // P_test_eigen_assignment();
-    // P_test_similarity();
-    // P_test_sorting();
     TestRobot tr;
     tr.run_tests();
+
+    TestWorld tw;
+    tw.run_tests();
     cout << "######################## All Tests Passed ########################\n";
 }

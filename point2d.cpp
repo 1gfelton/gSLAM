@@ -3,9 +3,9 @@
 #include <iostream>
 #include <Eigen/Dense>
 
-Point2d::Point2d() : x(0.0), y(0.0) {}                      // zero init
-Point2d::Point2d(float _x, float _y) : x(_x), y(_y) {}      // init with x & y values
-Point2d::Point2d(Eigen::Vector2f _v) : position(_v) {}        // init with Eigen vector
+Point2d::Point2d() : x(0.0), y(0.0), position(Eigen::Vector2f(0.0, 0.0)) {}                     // zero init
+Point2d::Point2d(float _x, float _y) : x(_x), y(_y), position(Eigen::Vector2f({_x, _y})){}      // init with x & y values
+Point2d::Point2d(Eigen::Vector2f _v) : position(_v), x(_v.x()), y(_v.y()) {}                    // init with Eigen vector
 
 void Point2d::randomize(const float &lower_bound, const float &upper_bound) {
     static std::random_device r;

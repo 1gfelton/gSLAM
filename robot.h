@@ -9,12 +9,15 @@
 /*
 Robot can either be 0 init, init with a location, or init with a trajectory
 It needs a direction that its facing
+`look_at` is the direction the robot is facing in DEGREES
+`position` is of type `Eigen::Vector2f`
 */
 struct Robot{
     Robot();
     Robot(const float _x, const float _y);
     Robot(const float _x, const float _y, const float _look_at);
     Robot(const std::vector<Point2d> t);
+
     float x; float y; float look_at;
     Eigen::Vector2f position;
     std::vector<Point2d> trajectory;
