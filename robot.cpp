@@ -30,12 +30,17 @@ float Robot::distance_to(Landmark landmark) {
     return abs((landmark.position - this->position).norm());
 }
 
-void Robot::generate_lerp_trajectory(Point2d start, Point2d end) {
+void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
     /*
     uses lerp to generate a linear trajectory from `start` to `end`
     */
     this->trajectory = {start};
-
+    float total_dist = start.distance_to(end);
+    double step_size = total_dist / n_steps;
+    Eigen::Vector2f cur_pos = this->position;
+    for (int i = 0; i < n_steps; i++) {
+        move_in_direction(step_size);
+    }
 }
 
 // Print utility

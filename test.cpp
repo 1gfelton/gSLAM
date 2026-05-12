@@ -103,6 +103,15 @@ void LM_test_similarity() {
     cout << "Passed!" << endl;
 }
 
+void printj(Robot r) {
+    cout << "Printing Trajectory...\n";
+    for (const auto &t : r.trajectory) {
+        t.print();
+    }
+    cout << endl;
+}
+
+
 struct TestRobot {
     Robot r;
     TestRobot() {
@@ -131,17 +140,9 @@ struct TestRobot {
             this->r.look_at += i;
             this->r.print();
         }
-        this->printj();
+        printj(this->r);
         cout << "Done with Robot tests\n";
     }
-    void printj() const {
-        cout << "Printing Trajectory...\n";
-        for (const auto &t : this->r.trajectory) {
-            t.print();
-        }
-        cout << endl;
-    }
-
     void run_tests() {
         this->TR_test_moving();
     }
@@ -183,9 +184,18 @@ struct TestWorld {
         cout << "Passed all distance tests." << endl;
     }
 
+    void test_trajectory_lerp() {
+        cout << "Testing LERP generation...\n";
+        Eigen::Vector2f end(10.0, 10.0);
+        w.robot.generate_lerp_trajectory(w.robot.position, Point2d(end), 100);
+        printj(w.robot);
+        cout << "Passed all distance tests." << endl;
+    }
+
     void run_tests() {
         this->simple_test();
         this->test_robot();
+        this->test_trajectory_lerp();
     }
 };
 
