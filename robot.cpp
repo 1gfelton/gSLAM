@@ -14,11 +14,15 @@ Robot::Robot(const float _x, const float _y, const float _look_at) : x(_x), y(_y
 // set position to the most recent point in the trajectory
 Robot::Robot(const vector<Point2d> t) : trajectory(t), position(t[t.size() - 1].position), x(t[t.size() - 1].x), y(t[t.size() - 1].y), look_at(0.0) {}
 
+/*
+TODO add gaussian noise to the movement
+$\hat{v} = v + \text{sample}(\alpha_1v^2 + \alpha_2\omega^2)$
+*/ 
+
 void Robot::move_in_direction(float dist) {
     /*
     move to `look_at` some distance `dist`
     */
-    // double in_radians = to_radians((double)this->look_at);
     Eigen::Vector2f delta = {cosd(this->look_at), sind(this->look_at)};
     this->position += (dist * delta);
 

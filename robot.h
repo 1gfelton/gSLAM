@@ -18,6 +18,9 @@ struct Robot{
     Robot(const float _x, const float _y, const float _look_at);
     Robot(const std::vector<Point2d> t);
 
+    /*
+    Pose: x, y, \theta
+    */
     float x; float y; float look_at;
     Eigen::Vector2f position;
     std::vector<Point2d> trajectory;
