@@ -25,6 +25,10 @@ void Robot::move_in_direction(float dist) {
     this->trajectory.push_back(Point2d(this->position.x(), this->position.y()));
 }
 
+float Robot::distance_to(Landmark landmark) {
+    return (landmark.position - this->position).squaredNorm();
+}
+
 // Print utility
 void Robot::print() const {
     cout << "Robot at: (" << position.x() << ", " << position.y() << ") look_at: " << look_at << std::endl;

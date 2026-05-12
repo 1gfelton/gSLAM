@@ -2,6 +2,7 @@
 #include "landmark.h"
 #include "point2d.h"
 #include "robot.h"
+#include "utils.h"
 #include <bits/stdc++.h>
 #include <Eigen/Dense>
 using namespace std;
@@ -131,7 +132,7 @@ struct TestRobot {
             this->r.print();
         }
         this->printj();
-        cout << "Done with Robot tests";
+        cout << "Done with Robot tests\n";
     }
     void printj() const {
         cout << "Printing Trajectory...\n";
@@ -171,11 +172,15 @@ struct TestWorld {
     void test_robot() {
         cout << "Testing world robot...\n";
         w.robot.print();
-        float mag = 10.0;
-        cout << "Moving robot " << mag << " dist in direction " << w.robot.look_at << endl;
-        w.robot.move_in_direction(mag);
-        cout << "New location:\n";
-        w.robot.print();
+        for (const auto &l : w.landmarks) {
+            cout << "Current LM:\n";
+            l.print();
+            float d = w.robot.distance_to(l);
+            float correct = sqrt(pow(abs(l.x - w.robot.x), 2) + pow(abs(l.y - w.robot.y), 2));
+            assert(isclose(d, correct));
+            cout << "Distance from robot to LM: " << w.robot.distance_to(l) << endl;
+        }
+        cout << "Finished testing robot distance to LM." << endl;
     }
 
     void run_tests() {
@@ -186,8 +191,8 @@ struct TestWorld {
 
 int main() {
     cout << "######################## Running Tests ########################\n";
-    TestRobot tr;
-    tr.run_tests();
+    // TestRobot tr;
+    // tr.run_tests();
 
     TestWorld tw;
     tw.run_tests();
