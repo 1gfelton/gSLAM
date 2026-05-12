@@ -21,7 +21,7 @@ void Point2d::print() const {
 }
 
 float Point2d::distance_to(Point2d other) {
-    return (this->position - other.position).norm();
+    return abs((this->position - other.position).norm());
 }
 
 bool operator<(const Point2d& a, const Point2d& b) {

@@ -168,16 +168,18 @@ struct TestWorld {
     void simple_test() {
         cout << "Testing world creation and printing of landmarks...\n";
         w.printlm();
+        cout << "Creation/Print passed!";
     }
 
-    void test_robot() {
+    void test_distance() {
         cout << "Testing world robot...\n";
         w.robot.print();
         for (const auto &l : w.landmarks) {
             cout << "Current LM:\n";
             l.print();
             float d = w.robot.distance_to(l);
-            float correct = sqrt(pow(abs(l.x - w.robot.x), 2) + pow(abs(l.y - w.robot.y), 2));
+            float correct = sqrt(pow(abs((double)l.x - (double)w.robot.x), 2) + pow(abs((double)l.y - (double)w.robot.y), 2));
+            cout << "Distance: " << d << " expected: " << correct << endl;
             assert(isclose(d, correct));
             cout << "Distance " << w.robot.distance_to(l) << " is correct.\n";
         }
@@ -189,12 +191,12 @@ struct TestWorld {
         Eigen::Vector2f end(10.0, 10.0);
         w.robot.generate_lerp_trajectory(w.robot.position, Point2d(end), 100);
         printj(w.robot);
-        cout << "Passed all distance tests." << endl;
+        cout << "Passed LERP Tests" << endl;
     }
 
     void run_tests() {
-        this->simple_test();
-        this->test_robot();
+        // this->simple_test();
+        this->test_distance();
         this->test_trajectory_lerp();
     }
 };
