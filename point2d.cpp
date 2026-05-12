@@ -20,6 +20,10 @@ void Point2d::print() const {
     std::cout << "Point2d: (" << position.x() << ", " << position.y() << ")\n";
 }
 
+float Point2d::distance_to(Point2d other) {
+    return (this->position - other.position).norm();
+}
+
 bool operator<(const Point2d& a, const Point2d& b) {
     return std::tie(a.x, a.y) < std::tie(b.x, b.y);
 }

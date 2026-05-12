@@ -55,6 +55,6 @@ double cosd(double x) {
 /*
 from `np.isclose()`
 */
-bool isclose(double a, double b, double rtol = 1e-5, double atol = 1e-8) {
+bool isclose(double a, double b, double rtol, double atol) {
     return std::abs(a - b) <= atol + rtol * std::abs(b);
 }

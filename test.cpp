@@ -178,9 +178,9 @@ struct TestWorld {
             float d = w.robot.distance_to(l);
             float correct = sqrt(pow(abs(l.x - w.robot.x), 2) + pow(abs(l.y - w.robot.y), 2));
             assert(isclose(d, correct));
-            cout << "Distance from robot to LM: " << w.robot.distance_to(l) << endl;
+            cout << "Distance " << w.robot.distance_to(l) << " is correct.\n";
         }
-        cout << "Finished testing robot distance to LM." << endl;
+        cout << "Passed all distance tests." << endl;
     }
 
     void run_tests() {

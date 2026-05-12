@@ -18,6 +18,7 @@ struct Point2d {
 
     void randomize(const float &lower_bound, const float &upper_bound);
     void print() const;
+    float distance_to(Point2d other);
 };
 
 bool operator<(const Point2d& a, const Point2d& b);

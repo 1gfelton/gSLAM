@@ -26,6 +26,7 @@ struct Robot{
     // move in a direction with some magnitude
     void move_in_direction(float mag);
     float distance_to(Landmark landmark);
+    void generate_lerp_trajectory(Point2d start, Point2d end);
 };
 
 #endif
