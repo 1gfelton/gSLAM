@@ -3,31 +3,36 @@
 #include "robot.h"
 #include "point2d.h"
 #include "utils.h"
+#include "control.h"
+#include "pose.h"
 using std::cout;
 using std::vector;
+using std::pair;
 
 // Init Methods
-Robot::Robot() : x(0.0), y(0.0), look_at(0.0), trajectory({Point2d(0.0, 0.0)}) {}
+Robot::Robot() : x(0.0), y(0.0), look_at(0.0), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
 // Init trajectory as haivng the init position as the first position
-Robot::Robot(const float _x, const float _y) : x(_x), y(_y), position(_x, _y), trajectory({Point2d(_x, _y)}) {}
-Robot::Robot(const float _x, const float _y, const float _look_at) : x(_x), y(_y), look_at(_look_at), position(_x, _y), trajectory({Point2d(_x, _y)}) {}
+Robot::Robot(const float _x, const float _y) : x(_x), y(_y), position(_x, _y), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
+Robot::Robot(const float _x, const float _y, const float _look_at) : x(_x), y(_y), look_at(_look_at), position(_x, _y), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
 // set position to the most recent point in the trajectory
-Robot::Robot(const vector<Point2d> t) : trajectory(t), position(t[t.size() - 1].position), x(t[t.size() - 1].x), y(t[t.size() - 1].y), look_at(0.0) {}
+Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), x(t[t.size() - 1].first.position.x()), y(t[t.size() - 1].first.position.y()), look_at(0.0) {}
 
 /*
 TODO add gaussian noise to the movement
 $\hat{v} = v + \text{sample}(\alpha_1v^2 + \alpha_2\omega^2)$
 */ 
 
+/* feel like trajectory should instead be vector<pair<Pose, Control>> where 
+Pose is (x, y, theta), Control is (v, w) or translational velocity and angular velocity*/
 void Robot::move_in_direction(float dist) {
     /*
     move to `look_at` some distance `dist`
     */
-    Eigen::Vector2f delta = {cosd(this->look_at), sind(this->look_at)};
+    Eigen::Vector2d delta = {cosd(this->look_at), sind(this->look_at)};
     this->position += (dist * delta);
 
     // now add this new direction to the trajectory
-    this->trajectory.push_back(Point2d(this->position.x(), this->position.y()));
+    this->trajectory.push_back(make_traj_position(this->position, this->look_at, dist, 0.0));
 }
 
 float Robot::distance_to(Landmark landmark) {
@@ -38,10 +43,11 @@ void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
     /*
     uses lerp to generate a linear trajectory from `start` to `end`
     */
-    this->trajectory = {start};
-    float total_dist = start.distance_to(end);
+    Eigen::Vector2d start_pos(start.x, start.y);
+    double total_dist = start.distance_to(end);
     double step_size = total_dist / n_steps;
-    Eigen::Vector2f cur_pos = this->position;
+    this->trajectory = {make_traj_position(start_pos, this->look_at, step_size, 0.0)};
+    Eigen::Vector2d cur_pos = this->position;
     for (int i = 0; i < n_steps; i++) {
         move_in_direction(step_size);
     }

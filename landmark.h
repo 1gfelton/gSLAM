@@ -18,11 +18,11 @@ struct Landmark {
     // init with x and y values
     Landmark(float _x, float _y);
     // init with a 2-vector containing x and y
-    Landmark(Eigen::Vector2f v);
+    Landmark(Eigen::Vector2d v);
 
     float x;
     float y;
-    Eigen::Vector2f position;
+    Eigen::Vector2d position;
 
     // Assign random values
     void randomize(const float &lower_bound, const float &upper_bound);

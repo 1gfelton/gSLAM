@@ -106,7 +106,8 @@ void LM_test_similarity() {
 void printj(Robot r) {
     cout << "Printing Trajectory...\n";
     for (const auto &t : r.trajectory) {
-        t.print();
+        t.first.print(); t.second.print();
+        // t.print();
     }
     cout << endl;
 }
@@ -188,8 +189,8 @@ struct TestWorld {
 
     void test_trajectory_lerp() {
         cout << "Testing LERP generation...\n";
-        Eigen::Vector2f end(10.0, 10.0);
-        w.robot.generate_lerp_trajectory(w.robot.position, Point2d(end), 100);
+        Eigen::Vector2d end(10.0, 10.0);
+        w.robot.generate_lerp_trajectory(Point2d(w.robot.position), Point2d(end), 100);
         printj(w.robot);
         cout << "Passed LERP Tests" << endl;
     }
@@ -203,8 +204,8 @@ struct TestWorld {
 
 int main() {
     cout << "######################## Running Tests ########################\n";
-    // TestRobot tr;
-    // tr.run_tests();
+    TestRobot tr;
+    tr.run_tests();
 
     TestWorld tw;
     tw.run_tests();

@@ -14,7 +14,7 @@ struct World {
     World(std::vector<Landmark> _landmarks, Robot _r);
     Robot robot;
     std::vector<Landmark> landmarks;
-    Eigen::Vector2f origin = {0.f, 0.f};
+    Eigen::Vector2d origin = {0.f, 0.f};
     void printlm() const;
 };
 

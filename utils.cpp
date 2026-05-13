@@ -1,6 +1,6 @@
 #include "utils.h"
 #include <math.h>
-
+using std::pair;
 /*
 from: https://stackoverflow.com/questions/31502120/sin-and-cos-give-unexpected-results-for-well-known-angles/31525208#31525208
 */
@@ -57,4 +57,9 @@ from `np.isclose()`
 */
 bool isclose(double a, double b, double rtol, double atol) {
     return std::abs(a - b) <= atol + rtol * std::abs(b);
+}
+
+/* Convenience method to return a new `pair<Pose, Control>` when making the trajectory */
+pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double v, double w) {
+    return std::make_pair(Pose(pos, theta), Control(v, w));
 }

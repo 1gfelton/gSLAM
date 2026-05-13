@@ -5,7 +5,7 @@
 
 Landmark::Landmark() : x(0.0), y(0.0) {}
 Landmark::Landmark(float _x, float _y) : x(_x), y(_y), position({_x, _y}) {}
-Landmark::Landmark(Eigen::Vector2f _position) : position(_position), x(_position.x()), y(_position.y()) {}
+Landmark::Landmark(Eigen::Vector2d _position) : position(_position), x(_position.x()), y(_position.y()) {}
 
 // Randomize a pre-initialized Landmark
 void Landmark::randomize(const float &lower_bound, const float &upper_bound) {
@@ -14,7 +14,7 @@ void Landmark::randomize(const float &lower_bound, const float &upper_bound) {
     std::uniform_real_distribution<float> P(lower_bound, upper_bound);
     x = P(generate);
     y = P(generate);
-    position = Eigen::Vector2f({x, y});
+    position = Eigen::Vector2d({x, y});
 }
 
 // Print a Landmark to console
