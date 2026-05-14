@@ -24,6 +24,32 @@ $\hat{v} = v + \text{sample}(\alpha_1v^2 + \alpha_2\omega^2)$
 
 /* feel like trajectory should instead be vector<pair<Pose, Control>> where 
 Pose is (x, y, theta), Control is (v, w) or translational velocity and angular velocity*/
+
+/* apply control 
+* all of this math is from Probabilistic Robotics by Thrun et al., 2006
+
+having translational velocity and rotational velocity
+using both to determine the next location
+in the ideal case, the robot moves on a circle with radius r
+(ideal as in there is no noise in the movement)
+$v = \omega\cdot r$
+$x_{t-1} = (x, y, \theta)^\top$
+the center of the circle is at:
+
+$\left(x - \frac{v}{\omega}\sin\theta, y + \frac{v}{\omega}\cos\theta\right)^\top$
+
+after $\Delta t$ motion, the robot is at:
+
+
+$\left(\begin{matrix}x'\\y'\\\theta'\end{matrix}\right) = \left(\begin{matrix}x_c + \frac{v}{\omega}\sin\theta \\ y_c - \frac{v}{\omega}\cos\theta \\ \Delta t\omega\end{matrix}\right)$
+
+
+ideal motion is noisy and given by:
+
+$\left(\begin{matrix}\hat{v}\\\hat{\omega}\end{matrix}\right) = \left(\begin{matrix}v\\\omega\end{matrix}\right) + \left(\begin{matrix}\epsilon_{\alpha_1v^2+\alpha_2\omega^2}\\\epsilon_{\alpha_3v^2+\alpha_4\omega^2}\end{matrix}\right)$
+
+$\alpha_n$ is an accuracy parameter that measures the error of the robot. the larger these values, the less accurate the robot
+*/
 void Robot::move_in_direction(float dist) {
     /*
     move to `look_at` some distance `dist`
