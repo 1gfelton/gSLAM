@@ -48,6 +48,7 @@ ideal motion is noisy and given by:
 
 $\left(\begin{matrix}\hat{v}\\\hat{\omega}\end{matrix}\right) = \left(\begin{matrix}v\\\omega\end{matrix}\right) + \left(\begin{matrix}\epsilon_{\alpha_1v^2+\alpha_2\omega^2}\\\epsilon_{\alpha_3v^2+\alpha_4\omega^2}\end{matrix}\right)$
 
+where $\epsilon_b \sim \text{Triangle}(0, b)$
 $\alpha_n$ is an accuracy parameter that measures the error of the robot. the larger these values, the less accurate the robot
 */
 void Robot::move_in_direction(float dist) {

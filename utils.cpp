@@ -63,3 +63,8 @@ bool isclose(double a, double b, double rtol, double atol) {
 pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double v, double w) {
     return std::make_pair(Pose(pos, theta), Control(v, w));
 }
+
+/* from Probabilistic Robotics by Thrun et al., 2006 */
+double triangle_distribution(double a, double sigma) {
+    return std::max(0.0, (1 / (sqrt(6) * sqrt(sigma))) - (abs(a) / (6 * sigma)));
+}
