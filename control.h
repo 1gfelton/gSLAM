@@ -5,9 +5,9 @@
 
 struct Control {
     Control();
-    Control(double trv, double orv);
-    double tr_velocity;
-    double or_velocity;
+    Control(double v, double w);
+    double v;
+    double w;
     void print() const;
 };
 

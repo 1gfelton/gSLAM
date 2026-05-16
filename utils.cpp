@@ -1,6 +1,9 @@
 #include "utils.h"
 #include <math.h>
+#include <random>
+#include <array>
 using std::pair;
+using std::array;
 /*
 from: https://stackoverflow.com/questions/31502120/sin-and-cos-give-unexpected-results-for-well-known-angles/31525208#31525208
 */
@@ -64,7 +67,15 @@ pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double
     return std::make_pair(Pose(pos, theta), Control(v, w));
 }
 
-/* from Probabilistic Robotics by Thrun et al., 2006 */
-double triangle_distribution(double a, double sigma) {
-    return std::max(0.0, (1 / (sqrt(6) * sqrt(sigma))) - (abs(a) / (6 * sigma)));
+/* from https://stackoverflow.com/questions/55681324/is-there-a-function-to-generate-random-number-using-triangular-distribution-in-c */
+std::piecewise_linear_distribution<double> triangular_distribution(double lower, double mu, double upper) {
+    array<double, 3> i{lower, mu, upper};
+    array<double, 3> w{0, 1, 0};
+    return std::piecewise_linear_distribution<double>{i.begin(), i.end(), w.begin()};
+}
+
+double sample_triangular_dist(double lower, double mu, double upper) {
+    std::mt19937 gen(std::random_device);
+    auto dist = triangular_distribution(lower, mu, upper);
+    return dist(gen);
 }

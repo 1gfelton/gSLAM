@@ -29,7 +29,7 @@ struct Robot{
     void print() const;
 
     // move in a direction with some magnitude
-    void move_in_direction(float mag);
+    void move_in_direction(Control u, Pose p);
     float distance_to(Landmark landmark);
     void generate_lerp_trajectory(Point2d start, Point2d end, int n_steps);
 };

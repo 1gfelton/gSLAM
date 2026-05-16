@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "control.h"
 #include "pose.h"
+#include "config.h"
 using std::cout;
 using std::vector;
 using std::pair;
@@ -51,15 +52,18 @@ $\left(\begin{matrix}\hat{v}\\\hat{\omega}\end{matrix}\right) = \left(\begin{mat
 where $\epsilon_b \sim \text{Triangle}(0, b)$
 $\alpha_n$ is an accuracy parameter that measures the error of the robot. the larger these values, the less accurate the robot
 */
-void Robot::move_in_direction(float dist) {
+void Robot::move_in_direction(Control u, Pose p) {
     /*
     move to `look_at` some distance `dist`
     */
-    Eigen::Vector2d delta = {cosd(this->look_at), sind(this->look_at)};
-    this->position += (dist * delta);
+    double x_prime = p.position.x() + ((u.v / u.w) * sin(this->look_at));
+    double y_prime = p.position.y() + ((u.v / u.w) * cos(this->look_at));
+    double theta_prime = CONFIG::DT * u.w;
+    // Eigen::Vector2d delta = {cosd(this->look_at), sind(this->look_at)};
+    // this->position += (dist * delta);
 
-    // now add this new direction to the trajectory
-    this->trajectory.push_back(make_traj_position(this->position, this->look_at, dist, 0.0));
+    // // now add this new direction to the trajectory
+    // this->trajectory.push_back(make_traj_position(this->position, this->look_at, dist, 0.0));
 }
 
 float Robot::distance_to(Landmark landmark) {
