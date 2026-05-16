@@ -9,6 +9,7 @@
 using std::cout;
 using std::vector;
 using std::pair;
+using namespace CONFIG;
 
 // Init Methods
 Robot::Robot() : x(0.0), y(0.0), look_at(0.0), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
@@ -56,9 +57,13 @@ void Robot::move_in_direction(Control u, Pose p) {
     /*
     move to `look_at` some distance `dist`
     */
+    // TODO: Implement sample_motion_model_velocity algorithm
+    // double v_hat = u.v + sample()
     double x_prime = p.position.x() + ((u.v / u.w) * sin(this->look_at));
     double y_prime = p.position.y() + ((u.v / u.w) * cos(this->look_at));
-    double theta_prime = CONFIG::DT * u.w;
+    double theta_prime = DT * u.w;
+
+    double v_eps = 
     // Eigen::Vector2d delta = {cosd(this->look_at), sind(this->look_at)};
     // this->position += (dist * delta);
 
