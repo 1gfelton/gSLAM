@@ -3,6 +3,11 @@
 
 #include <Eigen/Dense>
 
+/*
+
+$\begin{bmatrix}v\\\omega\end{bmatrix}$
+
+*/
 struct Control {
     Control();
     Control(double v, double w);

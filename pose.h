@@ -3,6 +3,11 @@
 
 #include <Eigen/Dense>
 
+/*
+
+$\begin{bmatrix}x_t\\y_t\\\theta\end{bmatrix}$
+
+*/
 struct Pose {
     Pose();
     Pose(Eigen::Vector2d _position, double _orientation);
