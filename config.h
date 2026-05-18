@@ -1,15 +1,19 @@
 #pragma once
 #include <random>
+#include <fstream>
+#include <nlohmann/json.hpp>
 namespace CONFIG {
+    std::ifstream f("config.json");
+    nlohmann::json cfg = nlohmann::json::parse(f);
     /* $\Delta t$ */
-    inline constexpr double DT = 0.0125;
+    inline double DT = cfg["DT"];
     /* $v$ */
-    inline constexpr double ALPHA_1 = 0.01;
-    inline constexpr double ALPHA_2 = 0.01;
+    inline double ALPHA_1 = cfg["ALPHA_1"];
+    inline double ALPHA_2 = cfg["ALPHA_2"];
     /* $\omega$ */
-    inline constexpr double ALPHA_3 = 0.01;
-    inline constexpr double ALPHA_4 = 0.01;
+    inline double ALPHA_3 = cfg["ALPHA_3"];
+    inline double ALPHA_4 = cfg["ALPHA_4"];
     /* $\hat{\gamma}$ */
-    inline constexpr double ALPHA_5 = 0.01;
-    inline constexpr double ALPHA_6 = 0.01;
+    inline double ALPHA_5 = cfg["ALPHA_5"];
+    inline double ALPHA_6 = cfg["ALPHA_6"];
 }

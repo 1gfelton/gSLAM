@@ -14,17 +14,14 @@ using std::pair;
 using namespace CONFIG;
 
 // Init Methods
-Robot::Robot() : x(0.0), y(0.0), position(0.0, 0.0), look_at(0.0) {}
-Robot::Robot(const double _x, const double _y) : x(_x), y(_y), position(_x, _y), look_at(0.0) {}
-Robot::Robot(const double _x, const double _y, const double _look_at) : x(_x), y(_y), position(_x, _y), look_at(_look_at) {}
+Robot::Robot() : position(0.0, 0.0), look_at(0.0) {}
+Robot::Robot(const double _x, const double _y) : position(_x, _y), look_at(0.0) {}
+Robot::Robot(const double _x, const double _y, const double _look_at) : position(_x, _y), look_at(_look_at) {}
 // set position to the most recent point in the trajectory
-Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), x(t[t.size() - 1].first.position.x()), y(t[t.size() - 1].first.position.y()), look_at(0.0) {}
-
-/* feel like trajectory should instead be vector<pair<Pose, Control>> where 
-Pose is (x, y, theta), Control is (v, w) or translational velocity and angular velocity*/
+Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), look_at(0.0) {}
 
 /* apply control 
-* all of this math is from Probabilistic Robotics by Thrun et al., 2006
+all of this math is from Probabilistic Robotics by Thrun et al., 2006
 
 having translational velocity and rotational velocity
 using both to determine the next location

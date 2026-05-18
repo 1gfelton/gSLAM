@@ -4,6 +4,7 @@
 #include "robot.h"
 #include "utils.h"
 #include <bits/stdc++.h>
+#include <fstream>
 #include <Eigen/Dense>
 using namespace std;
 
@@ -159,8 +160,36 @@ struct TestRobot {
         printj(this->r);
         cout << "Done with Robot tests\n";
     }
+
+    void TR_test_sample_next_pose() {
+        cout << "Sampling next poses...\n";
+        // create init pose + control
+        int n_poses = 50;
+        double v = 100.0;
+        double w = 50.0;
+        Control ctrl(v, w);
+        Pose init_pose(this->r.position, this->r.look_at);
+
+        vector<Pose> poses(n_poses);
+        for (int i = 0; i < n_poses; i++) {
+            poses[i] = this->r.sample_xt(ctrl, init_pose);
+        }
+        
+        // write to csv
+        std::ofstream out("sampled_poses.csv");
+        // output header and init pose
+        cout << "Writing to sampled_poses.csv...\n";
+        out << "\"x\",\"y\",\"orientation\",\"v\",\"w\"\n";
+        out << this->r.position.x() << ',' << this->r.position.y() << ',' << this->r.look_at << ',' << ctrl.v  << ',' << ctrl.w << "\n";
+        for (const auto &pose : poses) {
+            out << pose.position.x() << ',' << pose.position.y() << ',' << ',' << ",\n";
+        }
+        cout << "Output File written!" << endl;
+    }
+
     void run_tests() {
-        this->TR_test_moving();
+        // this->TR_test_moving();
+        this->TR_test_sample_next_pose();
     }
 };
 
@@ -194,7 +223,7 @@ struct TestWorld {
             cout << "Current LM:\n";
             l.print();
             double d = w.robot.distance_to(l);
-            double correct = sqrt(pow(abs((double)l.x - (double)w.robot.x), 2) + pow(abs((double)l.y - (double)w.robot.y), 2));
+            double correct = sqrt(pow(abs((double)l.x - (double)w.robot.position.x()), 2) + pow(abs((double)l.y - (double)w.robot.position.y()), 2));
             cout << "Distance: " << d << " expected: " << correct << endl;
             assert(isclose(d, correct));
             cout << "Distance " << w.robot.distance_to(l) << " is correct.\n";
