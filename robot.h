@@ -23,6 +23,10 @@ struct Robot{
     /*
     Pose: x, y, \theta
     */
+
+    /*
+    TODO: consider removing x/y variables and only keeping position (which allows for position.x() and position.y())
+    */
     double x; double y; double look_at;
     Eigen::Vector2d position;
     std::vector<std::pair<Pose, Control>> trajectory;

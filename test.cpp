@@ -136,6 +136,9 @@ struct TestRobot {
             if (flip) control.w *= -1;
             flip = !flip;
         }
+        /*
+        TODO: Add Robot::randomize() to randomize the position + x/y
+        */
         // cout << "Using controls: " << endl;
         for (int i = 0; i < n_controls; i++) {
             // sample new pose
