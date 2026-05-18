@@ -14,7 +14,7 @@ using std::pair;
 using namespace CONFIG;
 
 // Init Methods
-Robot::Robot() : x(0.0), y(0.0), look_at(0.0), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
+Robot::Robot() : x(0.0), y(0.0), look_at(0.0) {}
 // Init trajectory as haivng the init position as the first position
 Robot::Robot(const float _x, const float _y) : x(_x), y(_y), position(_x, _y), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
 Robot::Robot(const float _x, const float _y, const float _look_at) : x(_x), y(_y), look_at(_look_at), position(_x, _y), trajectory({make_traj_position(Eigen::Vector2d(), 0.0, 0.0, 0.0)}) {}
@@ -71,8 +71,8 @@ Pose Robot::sample_xt(Control u, Pose p) {
     // add noise to theta
     double g_hat = sample_triangular_dist(-1.0, (ALPHA_5 * pow(u.v, 2) + ALPHA_6 * pow(u.w, 2)), 1.0);
     // calculate next position
-    double new_x = p.position.x() - ((v_hat / w_hat) * sin(p.orientation)) + ((v_hat / w_hat) * sin(p.orientation + w_hat * DT));
-    double new_y = p.position.x() - ((v_hat / w_hat) * cos(p.orientation)) + ((v_hat / w_hat) * cos(p.orientation + w_hat * DT));
+    double new_x = p.position.x() - ((v_hat / w_hat) * sind(p.orientation)) + ((v_hat / w_hat) * sind(p.orientation + w_hat * DT));
+    double new_y = p.position.x() - ((v_hat / w_hat) * cosd(p.orientation)) + ((v_hat / w_hat) * cosd(p.orientation + w_hat * DT));
     double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
     return Pose(Eigen::Vector2d({new_x, new_y}), new_theta);
 }

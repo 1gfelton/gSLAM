@@ -130,8 +130,8 @@ struct TestRobot {
         int n_controls = 50;
         vector<Control> controls(n_controls, Control());
         for (auto &control : controls) {
-            control.v = 100.0;
-            control.w = 10.0;
+            control.v = 0.0;
+            control.w = 0.0;
         }
         cout << "Using controls: " << endl;
         for (int i = 0; i < n_controls; i++) {
