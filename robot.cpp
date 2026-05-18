@@ -41,9 +41,9 @@ $\left(\begin{matrix}x'\\y'\\\theta'\end{matrix}\right) = \left(\begin{matrix}x_
 
 true motion is noisy and given by:
 
-$\left(\begin{matrix}\hat{v}\\\hat{\omega}\end{matrix}\right) = \left(\begin{matrix}v\\\omega\end{matrix}\right) + \left(\begin{matrix}\epsilon_{\alpha_1v^2+\alpha_2\omega^2}\\\epsilon_{\alpha_3v^2+\alpha_4\omega^2}\end{matrix}\right)$
+$\left(\begin{matrix}\hat{v}\\\hat{\omega}\end{matrix}\right) = \left(\begin{matrix}v\\\omega\end{matrix}\right) + \left(\begin{matrix}\varepsilon_{\alpha_1v^2+\alpha_2\omega^2}\\\varepsilon_{\alpha_3v^2+\alpha_4\omega^2}\end{matrix}\right)$
 
-where $\epsilon_b \sim \text{Triangle}(0, b)$
+where $\varepsilon_b \sim \text{Triangle}(0, b)$
 $\alpha_n$ is an accuracy parameter that measures the error of the robot. the larger these values, the less accurate the robot
 */
 
@@ -52,29 +52,33 @@ sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
 Pose Robot::sample_xt(Control u, Pose p) {
     // sample noise to add to movement
-    double var_v = CONFIG::ALPHA_1 * pow(u.v, 2) + CONFIG::ALPHA_2 * pow(u.w, 2);
-    double var_w = CONFIG::ALPHA_3 * pow(u.v, 2) + CONFIG::ALPHA_4 * pow(u.w, 2);
+    double var_v = (CONFIG::ALPHA_1 * pow(u.v, 2)) + (CONFIG::ALPHA_2 * pow(u.w, 2));
+    double var_w = (CONFIG::ALPHA_3 * pow(u.v, 2)) + (CONFIG::ALPHA_4 * pow(u.w, 2));
     double v_eps = sample_triangular_dist(0.0, var_v);
     double w_eps = sample_triangular_dist(0.0, var_w);
     cout << "v_eps: " << v_eps << " w_eps: " << w_eps << std::endl;
+
     // add noise to movement
     double v_hat = u.v + v_eps;
     double w_hat = u.w + w_eps;
+
     // add noise to theta
-    double var_g = (CONFIG::ALPHA_5 * pow(u.v, 2) + CONFIG::ALPHA_6 * pow(u.w, 2));
+    double var_g = ((CONFIG::ALPHA_5 * pow(u.v, 2)) + (CONFIG::ALPHA_6 * pow(u.w, 2)));
     double g_hat = sample_triangular_dist(0.0, var_g);
+
     // calculate next position
     double new_x, new_y;
     cout << "w_hat: " << w_hat << std::endl;
+    // w == 0
     if (fabs(w_hat) < 1e-4) {
-        new_x = p.position.x() - (v_hat * sind(p.orientation)) + (v_hat * sind(p.orientation + w_hat * CONFIG::DT));
-        new_y = p.position.y() + (v_hat * cosd(p.orientation)) - (v_hat * cosd(p.orientation + w_hat * CONFIG::DT));
+        new_x = p.position.x() - (v_hat * sin(to_radians(p.orientation))) + (v_hat * sin(to_radians(p.orientation + (w_hat * CONFIG::DT))));
+        new_y = p.position.y() + (v_hat * cos(to_radians(p.orientation))) - (v_hat * cos(to_radians(p.orientation + (w_hat * CONFIG::DT))));
     } else {
-        new_x = p.position.x() - ((v_hat / w_hat) * sind(p.orientation)) + ((v_hat / w_hat) * sind(p.orientation + w_hat * CONFIG::DT));
-        new_y = p.position.y() + ((v_hat / w_hat) * cosd(p.orientation)) - ((v_hat / w_hat) * cosd(p.orientation + w_hat * CONFIG::DT));
+        new_x = p.position.x() - ((v_hat / w_hat) * sin(to_radians(p.orientation))) + ((v_hat / w_hat) * sin(to_radians(p.orientation + (w_hat * CONFIG::DT))));
+        new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * CONFIG::DT))));
     }
     double new_theta = p.orientation + (w_hat * CONFIG::DT) + (g_hat * CONFIG::DT);
-    return Pose(Eigen::Vector2d({new_x, new_y}), new_theta);
+    return Pose(Eigen::Vector2d(new_x, new_y), new_theta);
 }
 
 /*

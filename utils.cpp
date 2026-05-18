@@ -38,7 +38,7 @@ double cosd(double x) {
         return cos(x);
     }
     if (x < 0.0) {
-        return -cosd(-x);
+        return cosd(-x);
     }
     int quo;
     double x90 = remquo(fabs(x), 90.0, &quo);
@@ -46,11 +46,11 @@ double cosd(double x) {
         case 0:
             return cos(to_radians(x90) * 1.0);
         case 1:
-            return sin(to_radians(x90));
+            return -sin(to_radians(x90));
         case 2:
             return cos(to_radians(-x90) * 1.0);
         case 3:
-            return -sin(to_radians(x90));
+            return sin(to_radians(x90));
     }
     return 0.0;
 }
@@ -69,8 +69,8 @@ pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double
 
 /* from https://stackoverflow.com/questions/55681324/is-there-a-function-to-generate-random-number-using-triangular-distribution-in-c */
 std::piecewise_linear_distribution<double> triangular_distribution(double mu, double sigma2) {
-    double lower = -sigma2;
-    double upper = sigma2;
+    double lower = -sqrt(sigma2);
+    double upper = sqrt(sigma2);
     array<double, 3> i{lower, mu, upper};
     array<double, 3> w{0, 1, 0};
     return std::piecewise_linear_distribution<double>{i.begin(), i.end(), w.begin()};
@@ -79,6 +79,8 @@ std::piecewise_linear_distribution<double> triangular_distribution(double mu, do
 double sample_triangular_dist(double mu, double sigma2) {
     std::random_device r;
     std::mt19937 gen{r()};
-    auto dist = triangular_distribution(mu, sigma2);
-    return dist(gen);
+    auto dist = std::uniform_real_distribution<double>(-sqrt(sigma2), sqrt(sigma2));
+    double a1 = dist(gen);
+    double a2 = dist(gen);
+    return (sqrt(6)/2) * (a1 + a2);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <random>
 #include <fstream>
+#include <math.h>
 #include <nlohmann/json.hpp>
 namespace CONFIG {
     inline std::ifstream f("config.json");
