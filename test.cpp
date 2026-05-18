@@ -127,21 +127,29 @@ struct TestRobot {
         cout << "Testing Robot movement...\n";
         // have a set of random directions and distances in which to move
         // for each one, try moving the robot in that direction
-        int n_moves = 10;
-        vector<float> moves(n_moves, 0.0);
-        for (int i = 0; i < n_moves; i++) {
-            moves[i] += i;
+        int n_controls = 50;
+        vector<Control> controls(n_controls, Control());
+        for (auto &control : controls) {
+            control.v = 100.0;
+            control.w = 10.0;
         }
-        for (int i = 0; i < n_moves; i++) {
-            // move by i
-            cout << "Moving by magnitude " << moves[i] << endl;
-            this->r.move_in_direction(moves[i]);
-            // rotate in new direction by i
-            cout << "Rotating by " << this->r.look_at + i << endl;
-            this->r.look_at += i;
+        cout << "Using controls: " << endl;
+        for (int i = 0; i < n_controls; i++) {
+            // sample new pose
+            controls[i].print();
+            cout << "Before move:\n";
+            this->r.print();
+            Pose cur_pose = Pose(this->r.position, this->r.look_at);
+            Pose new_pose = this->r.sample_xt(controls[i], cur_pose);
+
+            this->r.move_to_new_pose(new_pose, controls[i]);
+            cout << "After move:\n";
             this->r.print();
         }
-        printj(this->r);
+        // printj(this->r);
+        cout << "Writing trajectory to .csv..." << endl;
+        this->r.write_traj_to_csv();
+        cout << "Trajectory written!" << endl;
         cout << "Done with Robot tests\n";
     }
     void run_tests() {
@@ -197,8 +205,8 @@ struct TestWorld {
 
     void run_tests() {
         // this->simple_test();
-        this->test_distance();
-        this->test_trajectory_lerp();
+        // this->test_distance();
+        // this->test_trajectory_lerp();
     }
 };
 

@@ -75,7 +75,8 @@ std::piecewise_linear_distribution<double> triangular_distribution(double lower,
 }
 
 double sample_triangular_dist(double lower, double mu, double upper) {
-    std::mt19937 gen(std::random_device);
+    std::random_device r;
+    std::mt19937 gen{r()};
     auto dist = triangular_distribution(lower, mu, upper);
     return dist(gen);
 }

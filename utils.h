@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Dense>
+#include <random>
 #include "control.h"
 #include "pose.h"
 double to_radians(float deg);

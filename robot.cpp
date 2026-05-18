@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <math.h>
 #include "robot.h"
 #include "point2d.h"
@@ -6,6 +7,7 @@
 #include "control.h"
 #include "pose.h"
 #include "config.h"
+
 using std::cout;
 using std::vector;
 using std::pair;
@@ -63,15 +65,25 @@ Pose Robot::sample_xt(Control u, Pose p) {
     double mu_w = ALPHA_3 * pow(u.v, 2) + ALPHA_4 * pow(u.w, 2);
     double v_eps = sample_triangular_dist(-1.0, mu_v, 1.0);
     double w_eps = sample_triangular_dist(-1.0, mu_w, 1.0);
-
+    // add noise to movement
     double v_hat = u.v + v_eps;
     double w_hat = u.w + w_eps;
-    // ideal new movement locations
+    // add noise to theta
     double g_hat = sample_triangular_dist(-1.0, (ALPHA_5 * pow(u.v, 2) + ALPHA_6 * pow(u.w, 2)), 1.0);
+    // calculate next position
     double new_x = p.position.x() - ((v_hat / w_hat) * sin(p.orientation)) + ((v_hat / w_hat) * sin(p.orientation + w_hat * DT));
     double new_y = p.position.x() - ((v_hat / w_hat) * cos(p.orientation)) + ((v_hat / w_hat) * cos(p.orientation + w_hat * DT));
-    double new_theta = p.orientation + w_hat * DT + g_hat * DT;
+    double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
     return Pose(Eigen::Vector2d({new_x, new_y}), new_theta);
+}
+
+/*
+sets the robot's pose to the input pose, and adds a new trajectory event from `p` and `u`
+*/
+void Robot::move_to_new_pose(Pose p, Control u) {
+    this->position = p.position;
+    this->look_at = p.orientation;
+    this->trajectory.push_back(make_traj_position(this->position, this->look_at, u.v, u.w));
 }
 
 double Robot::distance_to(Landmark landmark) {
@@ -101,4 +113,13 @@ void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
 // Print utility
 void Robot::print() const {
     cout << "Robot at: (" << position.x() << ", " << position.y() << ") look_at: " << look_at << std::endl;
+}
+
+void Robot::write_traj_to_csv() {
+    std::ofstream out("robot_trajectory.csv");
+    // header? TODO
+    out << "\"x\",\"y\",\"look_at\",\"v\",\"angular_v\"" << std::endl;
+    for (const auto &t : this->trajectory) {
+        out << t.first.position.x() << ',' << t.first.position.y() << ',' << t.first.orientation << ',' << t.second.v << ',' << t.second.w << std::endl;
+    }
 }

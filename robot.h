@@ -32,7 +32,9 @@ struct Robot{
     Pose sample_xt(Control u, Pose p);
     double distance_to(Landmark landmark);
     void look_to(Point2d point);
+    void move_to_new_pose(Pose p, Control u);
     void generate_lerp_trajectory(Point2d start, Point2d end, int n_steps);
+    void write_traj_to_csv();
 };
 
 #endif
