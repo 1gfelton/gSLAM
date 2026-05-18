@@ -52,17 +52,17 @@ sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
 Pose Robot::sample_xt(Control u, Pose p) {
     // sample noise to add to movement
-    double mu_v = CONFIG::ALPHA_1 * pow(u.v, 2) + CONFIG::ALPHA_2 * pow(u.w, 2);
-    double mu_w = CONFIG::ALPHA_3 * pow(u.v, 2) + CONFIG::ALPHA_4 * pow(u.w, 2);
-    double v_eps = sample_triangular_dist(mu_v);
-    double w_eps = sample_triangular_dist(mu_w);
+    double var_v = CONFIG::ALPHA_1 * pow(u.v, 2) + CONFIG::ALPHA_2 * pow(u.w, 2);
+    double var_w = CONFIG::ALPHA_3 * pow(u.v, 2) + CONFIG::ALPHA_4 * pow(u.w, 2);
+    double v_eps = sample_triangular_dist(0.0, var_v);
+    double w_eps = sample_triangular_dist(0.0, var_w);
     cout << "v_eps: " << v_eps << " w_eps: " << w_eps << std::endl;
     // add noise to movement
     double v_hat = u.v + v_eps;
     double w_hat = u.w + w_eps;
     // add noise to theta
-    double mu_g = (CONFIG::ALPHA_5 * pow(u.v, 2) + CONFIG::ALPHA_6 * pow(u.w, 2));
-    double g_hat = sample_triangular_dist(mu_g);
+    double var_g = (CONFIG::ALPHA_5 * pow(u.v, 2) + CONFIG::ALPHA_6 * pow(u.w, 2));
+    double g_hat = sample_triangular_dist(0.0, var_g);
     // calculate next position
     double new_x, new_y;
     cout << "w_hat: " << w_hat << std::endl;

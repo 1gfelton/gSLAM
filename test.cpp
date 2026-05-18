@@ -170,7 +170,9 @@ struct TestRobot {
         double v = CONFIG::V;
         double w = CONFIG::W;
         Control ctrl(v, w);
+        ctrl.print();
         Pose init_pose(this->r.position, this->r.look_at);
+        init_pose.print();
 
         vector<Pose> poses(n_poses);
         for (int i = 0; i < n_poses; i++) {

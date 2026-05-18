@@ -68,17 +68,17 @@ pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double
 }
 
 /* from https://stackoverflow.com/questions/55681324/is-there-a-function-to-generate-random-number-using-triangular-distribution-in-c */
-std::piecewise_linear_distribution<double> triangular_distribution(double mu) {
-    double lower = -sqrt(mu);
-    double upper = sqrt(mu);
+std::piecewise_linear_distribution<double> triangular_distribution(double mu, double sigma2) {
+    double lower = -sigma2;
+    double upper = sigma2;
     array<double, 3> i{lower, mu, upper};
     array<double, 3> w{0, 1, 0};
     return std::piecewise_linear_distribution<double>{i.begin(), i.end(), w.begin()};
 }
 
-double sample_triangular_dist(double mu) {
+double sample_triangular_dist(double mu, double sigma2) {
     std::random_device r;
     std::mt19937 gen{r()};
-    auto dist = triangular_distribution(mu);
+    auto dist = triangular_distribution(mu, sigma2);
     return dist(gen);
 }

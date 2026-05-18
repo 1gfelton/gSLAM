@@ -9,8 +9,8 @@ Point2d::Point2d(double _x, double _y) : x(_x), y(_y), position(Eigen::Vector2d(
 Point2d::Point2d(Eigen::Vector2d _v) : position(_v), x(_v.x()), y(_v.y()) {}                    // init with Eigen vector
 
 void Point2d::randomize(const double &lower_bound, const double &upper_bound) {
-    double x = sample_triangular_dist(-1.0, 0, 1.0);
-    double y = sample_triangular_dist(-1.0, 0, 1.0);
+    double x = sample_triangular_dist(0, 1);
+    double y = sample_triangular_dist(0, 1);
     position = Eigen::Vector2d({x, y});
 }
 
