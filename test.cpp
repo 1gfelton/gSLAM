@@ -3,6 +3,7 @@
 #include "point2d.h"
 #include "robot.h"
 #include "utils.h"
+#include "config.h"
 #include <bits/stdc++.h>
 #include <fstream>
 #include <Eigen/Dense>
@@ -122,6 +123,7 @@ struct TestRobot {
         // create random robot pos
         Robot _r(random_pos.x, random_pos.y);
         r = _r;
+        r.look_at = CONFIG::THETA;
     }
 
     void TR_test_moving() {
@@ -164,9 +166,9 @@ struct TestRobot {
     void TR_test_sample_next_pose() {
         cout << "Sampling next poses...\n";
         // create init pose + control
-        int n_poses = 50;
-        double v = 100.0;
-        double w = 50.0;
+        int n_poses = CONFIG::N_SAMPLES;
+        double v = CONFIG::V;
+        double w = CONFIG::W;
         Control ctrl(v, w);
         Pose init_pose(this->r.position, this->r.look_at);
 

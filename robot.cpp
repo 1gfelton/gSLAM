@@ -11,7 +11,7 @@
 using std::cout;
 using std::vector;
 using std::pair;
-using namespace CONFIG;
+// using namespace CONFIG;
 
 // Init Methods
 Robot::Robot() : position(0.0, 0.0), look_at(0.0) {}
@@ -21,7 +21,7 @@ Robot::Robot(const double _x, const double _y, const double _look_at) : position
 Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), look_at(0.0) {}
 
 /* apply control 
-all of this math is from Probabilistic Robotics by Thrun et al., 2006
+ all of this math is from Probabilistic Robotics by Thrun et al., 2006
 
 having translational velocity and rotational velocity
 using both to determine the next location
@@ -52,19 +52,28 @@ sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
 Pose Robot::sample_xt(Control u, Pose p) {
     // sample noise to add to movement
-    double mu_v = ALPHA_1 * pow(u.v, 2) + ALPHA_2 * pow(u.w, 2);
-    double mu_w = ALPHA_3 * pow(u.v, 2) + ALPHA_4 * pow(u.w, 2);
-    double v_eps = sample_triangular_dist(-1.0, mu_v, 1.0);
-    double w_eps = sample_triangular_dist(-1.0, mu_w, 1.0);
+    double mu_v = CONFIG::ALPHA_1 * pow(u.v, 2) + CONFIG::ALPHA_2 * pow(u.w, 2);
+    double mu_w = CONFIG::ALPHA_3 * pow(u.v, 2) + CONFIG::ALPHA_4 * pow(u.w, 2);
+    double v_eps = sample_triangular_dist(mu_v);
+    double w_eps = sample_triangular_dist(mu_w);
+    cout << "v_eps: " << v_eps << " w_eps: " << w_eps << std::endl;
     // add noise to movement
     double v_hat = u.v + v_eps;
     double w_hat = u.w + w_eps;
     // add noise to theta
-    double g_hat = sample_triangular_dist(-1.0, (ALPHA_5 * pow(u.v, 2) + ALPHA_6 * pow(u.w, 2)), 1.0);
+    double mu_g = (CONFIG::ALPHA_5 * pow(u.v, 2) + CONFIG::ALPHA_6 * pow(u.w, 2));
+    double g_hat = sample_triangular_dist(mu_g);
     // calculate next position
-    double new_x = p.position.x() - ((v_hat / w_hat) * sind(p.orientation)) + ((v_hat / w_hat) * sind(p.orientation + w_hat * DT));
-    double new_y = p.position.y() - ((v_hat / w_hat) * cosd(p.orientation)) + ((v_hat / w_hat) * cosd(p.orientation + w_hat * DT));
-    double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
+    double new_x, new_y;
+    cout << "w_hat: " << w_hat << std::endl;
+    if (fabs(w_hat) < 1e-4) {
+        new_x = p.position.x() - (v_hat * sind(p.orientation)) + (v_hat * sind(p.orientation + w_hat * CONFIG::DT));
+        new_y = p.position.y() + (v_hat * cosd(p.orientation)) - (v_hat * cosd(p.orientation + w_hat * CONFIG::DT));
+    } else {
+        new_x = p.position.x() - ((v_hat / w_hat) * sind(p.orientation)) + ((v_hat / w_hat) * sind(p.orientation + w_hat * CONFIG::DT));
+        new_y = p.position.y() + ((v_hat / w_hat) * cosd(p.orientation)) - ((v_hat / w_hat) * cosd(p.orientation + w_hat * CONFIG::DT));
+    }
+    double new_theta = p.orientation + (w_hat * CONFIG::DT) + (g_hat * CONFIG::DT);
     return Pose(Eigen::Vector2d({new_x, new_y}), new_theta);
 }
 

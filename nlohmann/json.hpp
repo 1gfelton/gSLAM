@@ -18003,7 +18003,7 @@ NLOHMANN_JSON_NAMESPACE_END
 
 #include <algorithm> // reverse, remove, fill, find, none_of
 #include <array> // array
-#include clocale> // localeconv, lconv
+#include <clocale> // localeconv, lconv
 #include <cmath> // labs, isfinite, isnan, signbit
 #include <cstddef> // size_t, ptrdiff_t
 #include <cstdint> // uint8_t
