@@ -10,15 +10,15 @@ Atomic class for 2D points, mostly used to build trajectory so we don't have to 
 
 struct Point2d {
     Point2d();
-    Point2d(float _x, float _y);
+    Point2d(double _x, double _y);
     Point2d(Eigen::Vector2d _v);
 
-    float x; float y;
+    double x; double y;
     Eigen::Vector2d position;
 
-    void randomize(const float &lower_bound, const float &upper_bound);
+    void randomize(const double &lower_bound, const double &upper_bound);
     void print() const;
-    float distance_to(Point2d other);
+    double distance_to(Point2d other);
 };
 
 bool operator<(const Point2d& a, const Point2d& b);

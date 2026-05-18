@@ -16,16 +16,16 @@
 struct Landmark {
     Landmark();
     // init with x and y values
-    Landmark(float _x, float _y);
+    Landmark(double _x, double _y);
     // init with a 2-vector containing x and y
     Landmark(Eigen::Vector2d v);
 
-    float x;
-    float y;
+    double x;
+    double y;
     Eigen::Vector2d position;
 
     // Assign random values
-    void randomize(const float &lower_bound, const float &upper_bound);
+    void randomize(const double &lower_bound, const double &upper_bound);
     void print() const;
 };
 

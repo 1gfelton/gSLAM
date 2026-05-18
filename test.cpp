@@ -118,8 +118,8 @@ struct TestRobot {
     TestRobot() {
         Point2d random_pos;
         random_pos.randomize(0.0, 1.0);
-        // create random robot looking at an angle 45 deg from x-axis
-        Robot _r(random_pos.x, random_pos.y, 45.0);
+        // create random robot pos
+        Robot _r(random_pos.x, random_pos.y);
         r = _r;
     }
 
@@ -129,27 +129,31 @@ struct TestRobot {
         // for each one, try moving the robot in that direction
         int n_controls = 50;
         vector<Control> controls(n_controls, Control());
+        bool flip = true;
         for (auto &control : controls) {
-            control.v = 0.0;
-            control.w = 0.0;
+            control.v = 50.0;
+            control.w = 20.0;
+            if (flip) control.w *= -1;
+            flip = !flip;
         }
-        cout << "Using controls: " << endl;
+        // cout << "Using controls: " << endl;
         for (int i = 0; i < n_controls; i++) {
             // sample new pose
             controls[i].print();
-            cout << "Before move:\n";
-            this->r.print();
+            // cout << "Before move:\n";
+            // this->r.print();
             Pose cur_pose = Pose(this->r.position, this->r.look_at);
             Pose new_pose = this->r.sample_xt(controls[i], cur_pose);
 
             this->r.move_to_new_pose(new_pose, controls[i]);
-            cout << "After move:\n";
-            this->r.print();
+            // cout << "After move:\n";
+            // this->r.print();
         }
         // printj(this->r);
         cout << "Writing trajectory to .csv..." << endl;
         this->r.write_traj_to_csv();
         cout << "Trajectory written!" << endl;
+        printj(this->r);
         cout << "Done with Robot tests\n";
     }
     void run_tests() {
@@ -163,8 +167,8 @@ struct TestWorld {
     TestWorld() {
         Point2d random_pos;
         random_pos.randomize(0.0, 1.0);
-        // create random robot looking at an angle 45 deg from x-axis
-        Robot _r(random_pos.x, random_pos.y, 45.0);
+        // create random robot position
+        Robot _r(random_pos.x, random_pos.y);
         w.robot = _r;
         // add a bunch of random landmarks
         for (int i = 0; i < n_landmarks; i++) {
@@ -186,8 +190,8 @@ struct TestWorld {
         for (const auto &l : w.landmarks) {
             cout << "Current LM:\n";
             l.print();
-            float d = w.robot.distance_to(l);
-            float correct = sqrt(pow(abs((double)l.x - (double)w.robot.x), 2) + pow(abs((double)l.y - (double)w.robot.y), 2));
+            double d = w.robot.distance_to(l);
+            double correct = sqrt(pow(abs((double)l.x - (double)w.robot.x), 2) + pow(abs((double)l.y - (double)w.robot.y), 2));
             cout << "Distance: " << d << " expected: " << correct << endl;
             assert(isclose(d, correct));
             cout << "Distance " << w.robot.distance_to(l) << " is correct.\n";

@@ -16,14 +16,14 @@ It needs a direction that its facing
 */
 struct Robot{
     Robot();
-    Robot(const float _x, const float _y);
-    Robot(const float _x, const float _y, const float _look_at);
+    Robot(const double _x, const double _y);
+    Robot(const double _x, const double _y, const double _look_at);
     Robot(const std::vector<std::pair<Pose, Control>> t);
 
     /*
     Pose: x, y, \theta
     */
-    float x; float y; float look_at;
+    double x; double y; double look_at;
     Eigen::Vector2d position;
     std::vector<std::pair<Pose, Control>> trajectory;
     void print() const;

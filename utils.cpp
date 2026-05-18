@@ -7,7 +7,7 @@ using std::array;
 /*
 from: https://stackoverflow.com/questions/31502120/sin-and-cos-give-unexpected-results-for-well-known-angles/31525208#31525208
 */
-double to_radians(float deg) { 
+double to_radians(double deg) { 
     return ((double) deg / 180.0) * (double) M_PI;
 }
 
