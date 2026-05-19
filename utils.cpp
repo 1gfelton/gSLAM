@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <math.h>
 #include <random>
+#include <algorithm>
 #include <array>
 using std::pair;
 using std::array;
@@ -67,15 +68,6 @@ pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double
     return std::make_pair(Pose(pos, theta), Control(v, w));
 }
 
-/* from https://stackoverflow.com/questions/55681324/is-there-a-function-to-generate-random-number-using-triangular-distribution-in-c */
-std::piecewise_linear_distribution<double> triangular_distribution(double mu, double sigma2) {
-    double lower = -sqrt(sigma2);
-    double upper = sqrt(sigma2);
-    array<double, 3> i{lower, mu, upper};
-    array<double, 3> w{0, 1, 0};
-    return std::piecewise_linear_distribution<double>{i.begin(), i.end(), w.begin()};
-}
-
 double sample_triangular_dist(double mu, double sigma2) {
     std::random_device r;
     std::mt19937 gen{r()};
@@ -83,4 +75,8 @@ double sample_triangular_dist(double mu, double sigma2) {
     double a1 = dist(gen);
     double a2 = dist(gen);
     return (sqrt(6)/2) * (a1 + a2);
+}
+
+double triangular_prob(double mu, double sigma2) {
+    return std::max(0.0, (1 / (sqrt(6) * sqrt(sigma2))) - (abs(mu)/(6 * sigma2)));
 }

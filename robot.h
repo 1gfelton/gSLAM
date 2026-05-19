@@ -31,6 +31,7 @@ struct Robot{
 
     // move in a direction with some magnitude
     Pose sample_xt(Control u, Pose p);
+    double get_motion_probability(Pose x, Control u, Pose prev);
     double distance_to(Landmark landmark);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);

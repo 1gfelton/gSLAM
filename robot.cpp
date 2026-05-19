@@ -81,6 +81,38 @@ Pose Robot::sample_xt(Control u, Pose p) {
     return Pose(Eigen::Vector2d(new_x, new_y), new_theta);
 }
 
+double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
+/*
+`motion_model_velocity` from Thuring et al. Computes the probability of pose `x` given `u` and `prev`
+*/
+    double xx = prev.position.x();
+    double x_prime = x.position.x();
+    double yy = prev.position.y();
+    double y_prime = x.position.y();
+
+    double num = (xx - x_prime * cos(to_radians(this->look_at))) + ((yy - y_prime) * sin(to_radians(this->look_at)));
+    double denom = ((yy - y_prime) * cos(to_radians(this->look_at))) - ((xx - x_prime) * sin(to_radians(this->look_at)));
+    double mu = (1/2) * (num / denom);
+
+    // $x^*$
+    double x_ = ((xx + x_prime) / 2) + (mu * (yy - y_prime));
+    // $y^*$
+    double y_ = ((yy + y_prime) / 2) + (mu * (xx - x_prime));
+    // $r^*$
+    double r_ = sqrt(pow(xx - x_, 2) + pow(yy - y_, 2));
+    // $\Delta\theta$
+    double dtheta = atan2(y_prime - y_, x_prime - x_) - atan2(yy - y_, xx - x_);
+    double dist = r_ * dtheta;
+    double w_hat = (dtheta / CONFIG::DT);
+    double v_hat = w_hat * r_;
+    double g_hat = (((this->look_at + dtheta) - this->look_at) / CONFIG::DT) - w_hat;
+
+    double var_v = (CONFIG::ALPHA_1 * pow(u.v, 2)) + (CONFIG::ALPHA_2 * pow(u.w, 2));
+    double var_w = (CONFIG::ALPHA_3 * pow(u.v, 2)) + (CONFIG::ALPHA_4 * pow(u.w, 2));
+    double var_g = (CONFIG::ALPHA_5 * pow(u.v, 2)) + (CONFIG::ALPHA_6 * pow(u.w, 2));
+    return triangular_prob(u.v - v_hat, var_v) * triangular_prob(u.w - w_hat, var_w) * triangular_prob(g_hat, var_g);
+}
+
 /*
 sets the robot's pose to the input pose, and adds a new trajectory event from `p` and `u`
 */
