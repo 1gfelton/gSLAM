@@ -32,6 +32,7 @@ struct Robot{
     // move in a direction with some magnitude
     Pose sample_xt(Control u, Pose p);
     double get_motion_probability(Pose x, Control u, Pose prev);
+    void EKF_SLAM(Eigen::Vector<double, 33> mu_p, Eigen::Matrix<double, 33, 33> cov_p, Eigen::Vector<double, 3> u_t, Eigen::Matrix<double, 2, 10> z_t, Eigen::Vector<int, 10 + 1> c_t);
     double distance_to(Landmark landmark);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);

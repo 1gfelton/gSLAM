@@ -8,6 +8,7 @@
 #include "pose.h"
 #include "config.h"
 
+using namespace Eigen;
 using std::cout;
 using std::vector;
 using std::pair;
@@ -78,7 +79,25 @@ Pose Robot::sample_xt(Control u, Pose p) {
         new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * CONFIG::DT))));
     }
     double new_theta = p.orientation + (w_hat * CONFIG::DT) + (g_hat * CONFIG::DT);
-    return Pose(Eigen::Vector2d(new_x, new_y), new_theta);
+    return Pose(Vector2d(new_x, new_y), new_theta);
+}
+
+/*
+EKF SLAM per Thrun et al. 2006
+mu_p: $\mu_{t-1}$ is the state vector: $[x, y, \theta, m_{1,x}, m_{1,y}, s_1, \cdots, m_{N,x}, ,m_{N,y}, s_N]^\top$
+cov_p: $\Sigma_{t-1}$ is the covariance matrix
+u_t: $u_t$ is the control at current timestep
+z_t: $z_t$ are the features at current timestep (ranges, bearings) $z_t\in\mathbb{R}^{2\times N}$
+c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
+*/
+void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vector<double, 3> u_t, Matrix<double, 2, 10> z_t, Vector<int, 10 + 1> c_t) {
+    // TODO: figure out a way to set $F_x \in \mathbb{R}^{3\times 3N+3}$
+    // 33 is a magic number for $N=10$
+    Matrix<double, 3, 33> Fx;
+    Fx += MatrixXd::Identity(3, 3);
+    // TODO: Pose needs to be a 3-vec (x, y, theta)
+    Vector<double, 3> x_t = this->sample_xt(u_t, mu_p);
+    double mu_bar = mu_p + Fx.transposeInPlace() * x_t;
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
@@ -134,12 +153,12 @@ void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
     /*
     uses lerp to generate a linear trajectory from `start` to `end`
     */
-    Eigen::Vector2d start_pos(start.x, start.y);
+    Vector2d start_pos(start.x, start.y);
     double total_dist = start.distance_to(end);
     double step_size = total_dist / n_steps;
     this->look_to(end);
     this->trajectory = {make_traj_position(start_pos, this->look_at, step_size, 0.0)};
-    Eigen::Vector2d cur_pos = this->position;
+    Vector2d cur_pos = this->position;
     for (int i = 0; i < n_steps; i++) {
         Pose new_pose = this->sample_xt(Control(0.1, 0.0), Pose(cur_pos, this->look_at));
         this->trajectory.push_back(make_traj_position(new_pose.position, this->look_at, step_size, 0.0));
