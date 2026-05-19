@@ -93,11 +93,25 @@ c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots
 void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vector<double, 3> u_t, Matrix<double, 2, 10> z_t, Vector<int, 10 + 1> c_t) {
     // TODO: figure out a way to set $F_x \in \mathbb{R}^{3\times 3N+3}$
     // 33 is a magic number for $N=10$
-    Matrix<double, 3, 33> Fx;
-    Fx += MatrixXd::Identity(3, 3);
+    Matrix<double, 3, 33> Fx = Matrix<double, 3, 33>::Zero();
+    // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
+    Fx.topLeftCorner(3, 3).setIdentity();
     // TODO: Pose needs to be a 3-vec (x, y, theta)
     Vector<double, 3> x_t = this->sample_xt(u_t, mu_p);
-    double mu_bar = mu_p + Fx.transposeInPlace() * x_t;
+    Vector<double, 33> mu_bar = mu_p + Fx.transpose() * x_t;
+
+    Matrix<double, 33, 33> I = Matrix<double, 33, 33>::Zero();
+    I.leftCols<3>().setIdentity();
+
+    Matrix<double, 3, 3> R = Matrix<double, 3, 3>::Zero();
+    R.topRightCorner(2, 1) = MatrixXd{x_t[0], x_t[1]};
+    Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
+
+    Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
+
+    Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
+    Q_t.setIdentity();
+
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
