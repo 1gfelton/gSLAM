@@ -9,10 +9,11 @@
 #include "config.h"
 
 using namespace Eigen;
+using namespace CONFIG;
+
 using std::cout;
 using std::vector;
 using std::pair;
-// using namespace CONFIG;
 
 // Init Methods
 Robot::Robot() : position(0.0, 0.0), look_at(0.0) {}
@@ -51,8 +52,9 @@ $\alpha_n$ is an accuracy parameter that measures the error of the robot. the la
 /* features: $\mathbf{f}_t \in \mathbb{R}^{3\times N}$ */
 void Robot::update_state_vec(MatrixXd features) {
     // N + 3
-    MatrixXd state = MatrixXd::Zero(features.size() + 3);
-    state[0] = this->position.x(); state[1] = this->position.y(); state[2] = this->look_at;
+    VectorXd state = VectorXd::Zero(features.size() + 3);
+    cout << "[robot.cpp]Robot location: " << this->position.x() << ", " << this->position.y() << std::endl;
+    state(0) = this->position.x(); state(1) = this->position.y(); state(2) = this->look_at;
     for (int i = 0; i < features.cols(); i++) {
         for (int j = 0; j < 3; j++) {
             state[i * 3 + j + 3] = features(j, i);
@@ -70,14 +72,16 @@ Updates the state vector of the robot
 MatrixXd Robot::sense_env(MatrixXd landmarks) {
     // return the landmarks + some sensor noise
     // 3 x N
-    MatrixXd features(3, CONFIG::N_LANDMARKS);
-    for (int i = 0; i < CONFIG::N_LANDMARKS; i++) {
+    MatrixXd features(3, N_LANDMARKS);
+    for (int i = 0; i < N_LANDMARKS; i++) {
+        cout << "Landmark:\tx: " << landmarks(0, i) << ",y: " << landmarks(1, i) << std::endl;
         double dx = landmarks(0, i) - this->position.x();
         double dy = landmarks(1, i) - this->position.y();
 
         double r = sqrt(dx*dx + dy*dy);
         double phi = atan2(dy, dx); // in radians
         double s = landmarks(0, i); // signature can be x value for now
+        cout << "Feature:\tr: " << r << ",phi: " << phi << ",s: " << s << std::endl;
 
         features(0, i) = r;
         features(1, i) = phi;
@@ -95,8 +99,8 @@ sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
 Pose Robot::sample_xt(Control u, Pose p) {
     // sample noise to add to movement
-    double var_v = (CONFIG::ALPHA_1 * pow(u.v, 2)) + (CONFIG::ALPHA_2 * pow(u.w, 2));
-    double var_w = (CONFIG::ALPHA_3 * pow(u.v, 2)) + (CONFIG::ALPHA_4 * pow(u.w, 2));
+    double var_v = (ALPHA_1 * pow(u.v, 2)) + (ALPHA_2 * pow(u.w, 2));
+    double var_w = (ALPHA_3 * pow(u.v, 2)) + (ALPHA_4 * pow(u.w, 2));
     double v_eps = sample_triangular_dist(0.0, var_v);
     double w_eps = sample_triangular_dist(0.0, var_w);
     cout << "v_eps: " << v_eps << " w_eps: " << w_eps << std::endl;
@@ -106,7 +110,7 @@ Pose Robot::sample_xt(Control u, Pose p) {
     double w_hat = u.w + w_eps;
 
     // add noise to theta
-    double var_g = ((CONFIG::ALPHA_5 * pow(u.v, 2)) + (CONFIG::ALPHA_6 * pow(u.w, 2)));
+    double var_g = ((ALPHA_5 * pow(u.v, 2)) + (ALPHA_6 * pow(u.w, 2)));
     double g_hat = sample_triangular_dist(0.0, var_g);
 
     // calculate next position
@@ -114,13 +118,13 @@ Pose Robot::sample_xt(Control u, Pose p) {
     cout << "w_hat: " << w_hat << std::endl;
     // w == 0
     if (fabs(w_hat) < 1e-4) {
-        new_x = p.position.x() - (v_hat * sin(to_radians(p.orientation))) + (v_hat * sin(to_radians(p.orientation + (w_hat * CONFIG::DT))));
-        new_y = p.position.y() + (v_hat * cos(to_radians(p.orientation))) - (v_hat * cos(to_radians(p.orientation + (w_hat * CONFIG::DT))));
+        new_x = p.position.x() - (v_hat * sin(to_radians(p.orientation))) + (v_hat * sin(to_radians(p.orientation + (w_hat * DT))));
+        new_y = p.position.y() + (v_hat * cos(to_radians(p.orientation))) - (v_hat * cos(to_radians(p.orientation + (w_hat * DT))));
     } else {
-        new_x = p.position.x() - ((v_hat / w_hat) * sin(to_radians(p.orientation))) + ((v_hat / w_hat) * sin(to_radians(p.orientation + (w_hat * CONFIG::DT))));
-        new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * CONFIG::DT))));
+        new_x = p.position.x() - ((v_hat / w_hat) * sin(to_radians(p.orientation))) + ((v_hat / w_hat) * sin(to_radians(p.orientation + (w_hat * DT))));
+        new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * DT))));
     }
-    double new_theta = p.orientation + (w_hat * CONFIG::DT) + (g_hat * CONFIG::DT);
+    double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
     return Pose(Vector2d(new_x, new_y), new_theta);
 }
 
@@ -132,29 +136,29 @@ u_t: $u_t$ is the control at current timestep
 z_t: $z_t$ are the features at current timestep (ranges, bearings) $z_t\in\mathbb{R}^{2\times N}$
 c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
 */
-void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vector<double, 3> u_t, Matrix<double, 2, 10> z_t, Vector<int, 10 + 1> c_t) {
-    // TODO: figure out a way to set $F_x \in \mathbb{R}^{3\times 3N+3}$
-    // 33 is a magic number for $N=10$
-    Matrix<double, 3, 33> Fx = Matrix<double, 3, 33>::Zero();
-    // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
-    Fx.topLeftCorner(3, 3).setIdentity();
-    // TODO: Pose needs to be a 3-vec (x, y, theta)
-    Vector<double, 3> x_t = this->sample_xt(u_t, mu_p);
-    Vector<double, 33> mu_bar = mu_p + Fx.transpose() * x_t;
+// void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vector<double, 3> u_t, Matrix<double, 2, 10> z_t, Vector<int, 10 + 1> c_t) {
+//     // TODO: figure out a way to set $F_x \in \mathbb{R}^{3\times 3N+3}$
+//     // 33 is a magic number for $N=10$
+//     Matrix<double, 3, 33> Fx = Matrix<double, 3, 33>::Zero();
+//     // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
+//     Fx.topLeftCorner(3, 3).setIdentity();
+//     // TODO: Pose needs to be a 3-vec (x, y, theta)
+//     Vector<double, 3> x_t = this->sample_xt(u_t, mu_p);
+//     Vector<double, 33> mu_bar = mu_p + Fx.transpose() * x_t;
 
-    Matrix<double, 33, 33> I = Matrix<double, 33, 33>::Zero();
-    I.leftCols<3>().setIdentity();
+//     Matrix<double, 33, 33> I = Matrix<double, 33, 33>::Zero();
+//     I.leftCols<3>().setIdentity();
 
-    Matrix<double, 3, 3> R = Matrix<double, 3, 3>::Zero();
-    R.topRightCorner(2, 1) = MatrixXd{x_t[0], x_t[1]};
-    Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
+//     Matrix<double, 3, 3> R = Matrix<double, 3, 3>::Zero();
+//     R.topRightCorner(2, 1) = MatrixXd{x_t[0], x_t[1]};
+//     Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
 
-    Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
+//     Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
 
-    Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
-    Q_t.setIdentity();
-    // TODO: Finish
-}
+//     Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
+//     Q_t.setIdentity();
+//     // TODO: Finish
+// }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
 /*
@@ -178,13 +182,13 @@ double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
     // $\Delta\theta$
     double dtheta = atan2(y_prime - y_, x_prime - x_) - atan2(yy - y_, xx - x_);
     double dist = r_ * dtheta;
-    double w_hat = (dtheta / CONFIG::DT);
+    double w_hat = (dtheta / DT);
     double v_hat = w_hat * r_;
-    double g_hat = (((this->look_at + dtheta) - this->look_at) / CONFIG::DT) - w_hat;
+    double g_hat = (((this->look_at + dtheta) - this->look_at) / DT) - w_hat;
 
-    double var_v = (CONFIG::ALPHA_1 * pow(u.v, 2)) + (CONFIG::ALPHA_2 * pow(u.w, 2));
-    double var_w = (CONFIG::ALPHA_3 * pow(u.v, 2)) + (CONFIG::ALPHA_4 * pow(u.w, 2));
-    double var_g = (CONFIG::ALPHA_5 * pow(u.v, 2)) + (CONFIG::ALPHA_6 * pow(u.w, 2));
+    double var_v = (ALPHA_1 * pow(u.v, 2)) + (ALPHA_2 * pow(u.w, 2));
+    double var_w = (ALPHA_3 * pow(u.v, 2)) + (ALPHA_4 * pow(u.w, 2));
+    double var_g = (ALPHA_5 * pow(u.v, 2)) + (ALPHA_6 * pow(u.w, 2));
     return triangular_prob(u.v - v_hat, var_v) * triangular_prob(u.w - w_hat, var_w) * triangular_prob(g_hat, var_g);
 }
 
@@ -202,14 +206,14 @@ double Robot::distance_to(Landmark landmark) {
 }
 
 void Robot::look_to(Point2d point) {
-    this->look_at = atan2(abs(point.y - this->position.y()), abs(point.x - this->position.x()));
+    this->look_at = atan2(abs(point.position.y() - this->position.y()), abs(point.position.x() - this->position.x()));
 }
 
 void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
     /*
     uses lerp to generate a linear trajectory from `start` to `end`
     */
-    Vector2d start_pos(start.x, start.y);
+    Vector2d start_pos(start.position.x(), start.position.y());
     double total_dist = start.distance_to(end);
     double step_size = total_dist / n_steps;
     this->look_to(end);

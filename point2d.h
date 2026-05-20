@@ -13,7 +13,6 @@ struct Point2d {
     Point2d(double _x, double _y);
     Point2d(Eigen::Vector2d _v);
 
-    double x; double y;
     Eigen::Vector2d position;
 
     void randomize(const double &lower_bound, const double &upper_bound);

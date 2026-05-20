@@ -31,5 +31,5 @@ namespace CONFIG {
     inline double W             = cfg["W"];
     inline double V             = cfg["V"];
     inline int N_LANDMARKS      = cfg["N_LANDMARKS"];
-    inline int STATE_VEC_SIZE   = (cfg["N_LANDMARKS"] * 3) + 3;
+    inline int STATE_VEC_SIZE   = ((int)cfg["N_LANDMARKS"] * 3) + 3;
 }

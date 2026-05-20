@@ -117,14 +117,24 @@ void printj(Robot r) {
     cout << endl;
 }
 
+void to_csv(VectorXd v, string file) {
+    cout << "Writing to csv file " << file + ".csv..." << endl;
+    string filename = file + ".csv";
+    std::ofstream out(filename);
+    out << "\"x\",\"y\",\"theta\"\n";
+    for (int i = 0; i < v.size(); i+=3) {
+        out << v(i) << ',' << v(i + 1) << ',' << v(i + 2) << "\n";
+    }
+    cout << "Wrote " << v.size()/3 << " lines to " << file + ".csv..." << endl;
+}
 
 struct TestRobot {
     Robot r;
     TestRobot() {
-        Point2d random_pos;
-        random_pos.randomize(0.0, 1.0);
+        Point2d pos;
+        pos.randomize(0.0, 1.0);
         // create random robot pos
-        Robot _r(random_pos.x, random_pos.y);
+        Robot _r(pos.position.x(), pos.position.y());
         r = _r;
         r.look_at = THETA;
     }
@@ -196,18 +206,28 @@ struct TestRobot {
 
     void TR_test_sensing() {
         cout << "Testing sensing...\n";
+        cout << "[test.cpp]Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
         MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
         landmarks *= 25.0;
+        cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
         MatrixXd features = this->r.sense_env(landmarks);
         print_features(features);
-        cout << "Landmarks -- ";
-        print_features(landmarks);
+        to_csv(this->r.state_vec, "state_vector");
+        print_state();
     }
 
     void print_features(MatrixXd feats) {
         cout << "Features:\n";
-        for (int i = 0; i < feats.rows(); i++) {
-            cout << "r:\t" << feats(i, 0) << " phi:\t" << feats(i, 1) << " s:\t" << feats(i, 2) << endl;
+        for (int i = 0; i < feats.cols(); i++) {
+            cout << "r:\t" << feats(0, i) << "\tphi:\t" << feats(1, i) << "\ts:\t" << feats(2, i) << endl;
+        }
+    }
+
+    void print_state() {
+        cout << "State vec:\n";
+        cout << "x:\t" << this->r.state_vec(0) << "\ty:\t" << this->r.state_vec(1) << "\ttheta:\t" << this->r.state_vec(2) << endl;
+        for (int i = 3; i < this->r.state_vec.size(); i+=3) {
+            cout << "r:\t" << this->r.state_vec(i) << "\tphi:\t" << this->r.state_vec(i+1) << "\ts:\t" << this->r.state_vec(i+2) << endl;
         }
     }
 
@@ -222,10 +242,10 @@ struct TestWorld {
     World w;
     int n_landmarks = 50;
     TestWorld() {
-        Point2d random_pos;
-        random_pos.randomize(0.0, 1.0);
+        Point2d pos;
+        pos.randomize(0.0, 1.0);
         // create random robot position
-        Robot _r(random_pos.x, random_pos.y);
+        Robot _r(pos.position.x(), pos.position.y());
         w.robot = _r;
         // add a bunch of random landmarks
         for (int i = 0; i < n_landmarks; i++) {
