@@ -49,6 +49,29 @@ $\alpha_n$ is an accuracy parameter that measures the error of the robot. the la
 */
 
 /*
+Simulates the robot taking a sensor reading of its environment. 
+converts the landmarks to features and adds noise to them
+*/
+Matrix<double, 3, 10> Robot::sense_env(Matrix<double, 2, 10> landmarks) {
+    // return the landmarks + some sensor noise
+    Matrix<double, 3, 10> features = Matrix<double, 10, 3>::Zero();
+    for (int i = 0; i < CONFIG::N_LANDMARKS; i++) {
+        double dx = landmarks(0, i) - this->position.x();
+        double dy = landmarks(1, i) - this->position.y();
+
+        double r = sqrt(dx*dx + dy*dy);
+        double phi = atan2(dy, dx); // in radians
+        double s = landmarks(0, i); // signature can be x value for now
+
+        features(0, i) = r;
+        features(1, i) = phi;
+        features(2, i) = s;
+    }
+    Matrix<double, 3, 10> noise = Matrix<double, 3, 10>::Random();
+    return features + noise;
+}
+
+/*
 sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
 Pose Robot::sample_xt(Control u, Pose p) {
@@ -111,7 +134,7 @@ void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vect
 
     Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
     Q_t.setIdentity();
-
+    // TODO: Finish
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {

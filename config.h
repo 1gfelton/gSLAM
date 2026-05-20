@@ -18,8 +18,8 @@ namespace CONFIG {
     inline double ALPHA_5       = cfg["ALPHA_5"];
     inline double ALPHA_6       = cfg["ALPHA_6"];
 
-    /* $\varepsilon_{\sigma^r}$ */
     /* Noise from the sensor readings for the range, heading, and label */
+    /* $\varepsilon_{\sigma^r}$ */
     inline double SIGMA_R       = cfg["SIGMA_R"];
     /* $\varepsilon_{\sigma^\phi}$ */
     inline double SIGMA_PHI     = cfg["SIGMA_PHI"];
