@@ -7,7 +7,10 @@
 #include <bits/stdc++.h>
 #include <fstream>
 #include <Eigen/Dense>
+
 using namespace std;
+using namespace Eigen;
+using namespace CONFIG;
 
 void P_test_sorting() {
     cout << "Testing sorting..." << endl;
@@ -123,7 +126,7 @@ struct TestRobot {
         // create random robot pos
         Robot _r(random_pos.x, random_pos.y);
         r = _r;
-        r.look_at = CONFIG::THETA;
+        r.look_at = THETA;
     }
 
     void TR_test_moving() {
@@ -166,9 +169,9 @@ struct TestRobot {
     void TR_test_sample_next_pose() {
         cout << "Sampling next poses...\n";
         // create init pose + control
-        int n_poses = CONFIG::N_SAMPLES;
-        double v = CONFIG::V;
-        double w = CONFIG::W;
+        int n_poses = N_SAMPLES;
+        double v = V;
+        double w = W;
         Control ctrl(v, w);
         ctrl.print();
         Pose init_pose(this->r.position, this->r.look_at);
@@ -191,9 +194,27 @@ struct TestRobot {
         cout << "Output File written!" << endl;
     }
 
+    void TR_test_sensing() {
+        cout << "Testing sensing...\n";
+        MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
+        landmarks *= 25.0;
+        MatrixXd features = this->r.sense_env(landmarks);
+        print_features(features);
+        cout << "Landmarks -- ";
+        print_features(landmarks);
+    }
+
+    void print_features(MatrixXd feats) {
+        cout << "Features:\n";
+        for (int i = 0; i < feats.rows(); i++) {
+            cout << "r:\t" << feats(i, 0) << " phi:\t" << feats(i, 1) << " s:\t" << feats(i, 2) << endl;
+        }
+    }
+
     void run_tests() {
         // this->TR_test_moving();
-        this->TR_test_sample_next_pose();
+        // this->TR_test_sample_next_pose();
+        this->TR_test_sensing();
     }
 };
 
@@ -237,7 +258,7 @@ struct TestWorld {
 
     void test_trajectory_lerp() {
         cout << "Testing LERP generation...\n";
-        Eigen::Vector2d end(10.0, 10.0);
+        Vector2d end(10.0, 10.0);
         w.robot.generate_lerp_trajectory(Point2d(w.robot.position), Point2d(end), 100);
         printj(w.robot);
         cout << "Passed LERP Tests" << endl;
@@ -252,10 +273,9 @@ struct TestWorld {
 
 int main() {
     cout << "######################## Running Tests ########################\n";
+
     TestRobot tr;
     tr.run_tests();
 
-    TestWorld tw;
-    tw.run_tests();
     cout << "######################## All Tests Passed ########################\n";
 }

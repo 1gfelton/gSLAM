@@ -48,13 +48,29 @@ where $\varepsilon_b \sim \text{Triangle}(0, b)$
 $\alpha_n$ is an accuracy parameter that measures the error of the robot. the larger these values, the less accurate the robot
 */
 
+/* features: $\mathbf{f}_t \in \mathbb{R}^{3\times N}$ */
+void Robot::update_state_vec(MatrixXd features) {
+    // N + 3
+    MatrixXd state = MatrixXd::Zero(features.size() + 3);
+    state[0] = this->position.x(); state[1] = this->position.y(); state[2] = this->look_at;
+    for (int i = 0; i < features.cols(); i++) {
+        for (int j = 0; j < 3; j++) {
+            state[i * 3 + j + 3] = features(j, i);
+        }
+    }
+    this->state_vec = state;
+}
+
 /*
 Simulates the robot taking a sensor reading of its environment. 
-converts the landmarks to features and adds noise to them
+converts the landmarks to features and adds noise to them.
+Gives the feature vec at current timestep $f_t(z_t)$
+Updates the state vector of the robot
 */
-Matrix<double, 3, 10> Robot::sense_env(Matrix<double, 2, 10> landmarks) {
+MatrixXd Robot::sense_env(MatrixXd landmarks) {
     // return the landmarks + some sensor noise
-    Matrix<double, 3, 10> features = Matrix<double, 10, 3>::Zero();
+    // 3 x N
+    MatrixXd features(3, CONFIG::N_LANDMARKS);
     for (int i = 0; i < CONFIG::N_LANDMARKS; i++) {
         double dx = landmarks(0, i) - this->position.x();
         double dy = landmarks(1, i) - this->position.y();
@@ -67,8 +83,11 @@ Matrix<double, 3, 10> Robot::sense_env(Matrix<double, 2, 10> landmarks) {
         features(1, i) = phi;
         features(2, i) = s;
     }
-    Matrix<double, 3, 10> noise = Matrix<double, 3, 10>::Random();
-    return features + noise;
+    // 3 x N
+    MatrixXd noise = Eigen::MatrixXd::Random(features.rows(), features.cols());
+    MatrixXd ans = features + noise;
+    this->update_state_vec(ans);
+    return ans;
 }
 
 /*

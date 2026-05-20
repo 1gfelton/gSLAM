@@ -27,13 +27,15 @@ struct Robot{
     double look_at;
     Eigen::Vector2d position;
     std::vector<std::pair<Pose, Control>> trajectory;
+    Eigen::VectorXd state_vec;
     void print() const;
 
     // move in a direction with some magnitude
     Pose sample_xt(Control u, Pose p);
     double get_motion_probability(Pose x, Control u, Pose prev);
     void EKF_SLAM(Eigen::Vector<double, 33> mu_p, Eigen::Matrix<double, 33, 33> cov_p, Eigen::Vector<double, 3> u_t, Eigen::Matrix<double, 2, 10> z_t, Eigen::Vector<int, 10 + 1> c_t);
-    Eigen::Matrix<double, 3, 10> sense_env(Eigen::Matrix<double, 2, 10> landmarks);
+    void Robot::update_state_vec(Eigen::MatrixXd features);
+    Eigen::MatrixXd sense_env(Eigen::MatrixXd landmarks);
     double distance_to(Landmark landmark);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);
