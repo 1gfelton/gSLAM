@@ -176,7 +176,6 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, 
     cout << "Gt:\n" << Gt << std::endl;
 
     // $\bar{\Sigma}_t = G_t\Sigma_{t-1}G_t^\top + F_x^\top R_t F_x$
-    // here i assume $R_t$ is $g_t$
     MatrixXd cov_bar = (Gt * cov_p * Gt.transpose()) + (Fx.transpose() * Rt * Fx);
     cout << "cov_bar:\n" << cov_bar << std::endl;
 
