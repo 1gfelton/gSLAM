@@ -31,5 +31,10 @@ namespace CONFIG {
     inline double W             = cfg["W"];
     inline double V             = cfg["V"];
     inline int N_LANDMARKS      = cfg["N_LANDMARKS"];
+
+    inline double SIGMA_X       = cfg["SIGMA_X"];
+    inline double SIGMA_Y       = cfg["SIGMA_Y"];
+    inline double SIGMA_THETA   = cfg["SIGMA_THETA"];
+
     inline int STATE_VEC_SIZE   = ((int)cfg["N_LANDMARKS"] * 3) + 3;
 }

@@ -138,6 +138,11 @@ z_t: $z_t$ are the features at current timestep (ranges, bearings) $z_t\in\mathb
 c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
 */
 void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, VectorXi c_t) {
+    // define R here (TODO: remove this and define as global once)
+    MatrixXd Rt = MatrixXd::Identity(3, 3);
+    Rt.diagonal() = Vector3d{SIGMA_X, SIGMA_Y, SIGMA_THETA};
+    cout << "R:\n" << Rt << std::endl;
+
     // $3\times 3N + 3$
     MatrixXd Fx = MatrixXd::Zero(3, 3 * N_LANDMARKS + 3);
     // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
@@ -166,16 +171,18 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, 
     MatrixXd g_t = MatrixXd::Zero(3, 3);
     cout << "v1: " << v1 << " v2: " << v2 << std::endl;;
     Vector2d tmp = {-v2, v1};
-    cout << "g before:\n" << g_t << std::endl;
     g_t.block(0, 2, 2, 1) = tmp;
-    cout << "g after:\n" << g_t << std::endl;
-    // R.topRightCorner(2, 1) = Vector2d{-v2, v1};
-    // Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
+    MatrixXd Gt = I + Fx.transpose() * g_t * Fx;
+    cout << "Gt:\n" << Gt << std::endl;
 
-    // Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
+    // $\bar{\Sigma}_t = G_t\Sigma_{t-1}G_t^\top + F_x^\top R_t F_x$
+    // here i assume $R_t$ is $g_t$
+    MatrixXd cov_bar = (Gt * cov_p * Gt.transpose()) + (Fx.transpose() * Rt * Fx);
+    cout << "cov_bar:\n" << cov_bar << std::endl;
 
-    // Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
-    // Q_t.setIdentity();
+    MatrixXd Qt = MatrixXd::Identity(3, 3);
+    Qt.diagonal() = Vector3d{SIGMA_R, SIGMA_PHI, SIGMA_S};
+    cout << "Q:\n" << Qt << std::endl;
     // TODO: Finish
 }
 

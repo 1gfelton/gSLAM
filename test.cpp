@@ -239,7 +239,6 @@ struct TestRobot {
         landmarks *= 25.0;
         cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
         MatrixXd features = this->r.sense_env(landmarks);
-        // print_features(features);
 
         // run SLAM
         Vector2d control = {V, W};
@@ -247,6 +246,7 @@ struct TestRobot {
         VectorXd init_state_vec = VectorXd::Zero(N_LANDMARKS * 3 + 3);
         MatrixXd init_cov = MatrixXd::Zero(N_LANDMARKS * 3 + 3, N_LANDMARKS * 3 + 3);
         this->r.EKF_SLAM(init_state_vec, init_cov, control, features, c);
+
         // to_csv(this->r.state_vec, "state_vector");
         // print_state();
     }

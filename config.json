@@ -13,5 +13,8 @@
     "N_LANDMARKS"   : 10,
     "SIGMA_R"       : 0.1,
     "SIGMA_PHI"     : 0.1,
-    "SIGMA_S"       : 0.1
+    "SIGMA_S"       : 0.1,
+    "SIGMA_X"       : 0.1,
+    "SIGMA_Y"       : 0.1,
+    "SIGMA_THETA"   : 0.1
 }
