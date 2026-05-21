@@ -3,57 +3,15 @@
 #include <random>
 #include <algorithm>
 #include <array>
+
 using std::pair;
 using std::array;
+using namespace Eigen;
 /*
 from: https://stackoverflow.com/questions/31502120/sin-and-cos-give-unexpected-results-for-well-known-angles/31525208#31525208
 */
 double to_radians(double deg) { 
     return ((double) deg / 180.0) * (double) M_PI;
-}
-
-double sind(double x) {
-    if (!isfinite(x)) {
-        return sin(x);
-    }
-    if (x < 0.0) {
-        return -sind(-x);
-    }
-    int quo;
-    double x90 = remquo(fabs(x), 90.0, &quo);
-    switch(quo % 4) {
-        case 0:
-            return sin(to_radians(x90) * 1.0);
-        case 1:
-            return cos(to_radians(x90));
-        case 2:
-            return sin(to_radians(-x90) * 1.0);
-        case 3:
-            return -cos(to_radians(x90));
-    }
-    return 0.0;
-}
-
-double cosd(double x) {
-    if (!isfinite(x)) {
-        return cos(x);
-    }
-    if (x < 0.0) {
-        return cosd(-x);
-    }
-    int quo;
-    double x90 = remquo(fabs(x), 90.0, &quo);
-    switch(quo % 4) {
-        case 0:
-            return cos(to_radians(x90) * 1.0);
-        case 1:
-            return -sin(to_radians(x90));
-        case 2:
-            return cos(to_radians(-x90) * 1.0);
-        case 3:
-            return sin(to_radians(x90));
-    }
-    return 0.0;
 }
 
 /*
@@ -64,8 +22,9 @@ bool isclose(double a, double b, double rtol, double atol) {
 }
 
 /* Convenience method to return a new `pair<Pose, Control>` when making the trajectory */
-pair<Pose, Control> make_traj_position(Eigen::Vector2d pos, double theta, double v, double w) {
-    return std::make_pair(Pose(pos, theta), Control(v, w));
+pair<Pose, Control> make_traj_position(Vector2d pos, double theta, double v, double w) {
+    Vector2d p = pos(seq(0, 1));
+    return std::make_pair(Pose(p, theta), Control(v, w));
 }
 
 double sample_triangular_dist(double mu, double sigma2) {
@@ -79,4 +38,9 @@ double sample_triangular_dist(double mu, double sigma2) {
 
 double triangular_prob(double mu, double sigma2) {
     return std::max(0.0, (1 / (sqrt(6) * sqrt(sigma2))) - (abs(mu)/(6 * sigma2)));
+}
+
+Pose make_pose(Vector3d v) {
+    Vector2d vv = {v[0], v[1]};
+    return Pose(vv, v[2]);
 }

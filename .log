@@ -1,0 +1,6 @@
+/usr/bin/ld: /tmp/ccPyPGOV.o: in function `Robot::move_to_new_pose(Pose, Control)':
+robot.cpp:(.text+0x19f8): undefined reference to `make_traj_position(Eigen::Matrix<double, 2, 1, 0, 2, 1>, double, double, double)'
+/usr/bin/ld: /tmp/ccPyPGOV.o: in function `Robot::generate_lerp_trajectory(Point2d, Point2d, int)':
+robot.cpp:(.text+0x1c97): undefined reference to `make_traj_position(Eigen::Matrix<double, 2, 1, 0, 2, 1>, double, double, double)'
+/usr/bin/ld: robot.cpp:(.text+0x1dfe): undefined reference to `make_traj_position(Eigen::Matrix<double, 2, 1, 0, 2, 1>, double, double, double)'
+collect2: error: ld returned 1 exit status

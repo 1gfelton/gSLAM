@@ -97,7 +97,7 @@ MatrixXd Robot::sense_env(MatrixXd landmarks) {
 /*
 sample a random pose $x_t\sim p(x_t\mid u_t, x_{t-1})$
 */
-Pose Robot::sample_xt(Control u, Pose p) {
+Vector3d Robot::sample_xt(Control u, Pose p) {
     // sample noise to add to movement
     double var_v = (ALPHA_1 * pow(u.v, 2)) + (ALPHA_2 * pow(u.w, 2));
     double var_w = (ALPHA_3 * pow(u.v, 2)) + (ALPHA_4 * pow(u.w, 2));
@@ -125,7 +125,8 @@ Pose Robot::sample_xt(Control u, Pose p) {
         new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * DT))));
     }
     double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
-    return Pose(Vector2d(new_x, new_y), new_theta);
+    Vector3d res({new_x, new_y, new_theta});
+    return res;
 }
 
 /*
@@ -136,29 +137,47 @@ u_t: $u_t$ is the control at current timestep
 z_t: $z_t$ are the features at current timestep (ranges, bearings) $z_t\in\mathbb{R}^{2\times N}$
 c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
 */
-// void Robot::EKF_SLAM(Vector<double, 33> mu_p, Matrix<double, 33, 33> cov_p, Vector<double, 3> u_t, Matrix<double, 2, 10> z_t, Vector<int, 10 + 1> c_t) {
-//     // TODO: figure out a way to set $F_x \in \mathbb{R}^{3\times 3N+3}$
-//     // 33 is a magic number for $N=10$
-//     Matrix<double, 3, 33> Fx = Matrix<double, 3, 33>::Zero();
-//     // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
-//     Fx.topLeftCorner(3, 3).setIdentity();
-//     // TODO: Pose needs to be a 3-vec (x, y, theta)
-//     Vector<double, 3> x_t = this->sample_xt(u_t, mu_p);
-//     Vector<double, 33> mu_bar = mu_p + Fx.transpose() * x_t;
+void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, VectorXi c_t) {
+    // $3\times 3N + 3$
+    MatrixXd Fx = MatrixXd::Zero(3, 3 * N_LANDMARKS + 3);
+    // $[\mathbf{I}_{3\times3},0_{3\times3N}]$
+    Fx.topLeftCorner(3, 3).setIdentity();
 
-//     Matrix<double, 33, 33> I = Matrix<double, 33, 33>::Zero();
-//     I.leftCols<3>().setIdentity();
+    // calculate noise-free next pose
+    double frac = (u_t[0] / u_t[1]);
+    double w = u_t[1];
+    double theta = mu_p[2];
+    double v1 = (-frac * sin(theta)) + (frac * sin(theta + w * DT));
+    double v2 = (frac * cos(theta)) - (frac * sin(theta + w * DT));
+    double v3 = w * DT;
+    Vector3d update({v1, v2, v3});
 
-//     Matrix<double, 3, 3> R = Matrix<double, 3, 3>::Zero();
-//     R.topRightCorner(2, 1) = MatrixXd{x_t[0], x_t[1]};
-//     Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
 
-//     Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
 
-//     Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
-//     Q_t.setIdentity();
-//     // TODO: Finish
-// }
+    // $\bar{\mu}_t = \mu_{t-1} + F_x^T \begin{pmatrix} -\dfrac{v_t}{\omega_t} \sin\mu_{t-1,\theta} + \dfrac{v_t}{\omega_t} \sin(\mu_{t-1,\theta} + \omega_t \Delta t) \\[8pt] \dfrac{v_t}{\omega_t} \cos\mu_{t-1,\theta} - \dfrac{v_t}{\omega_t} \cos(\mu_{t-1,\theta} + \omega_t \Delta t) \\[8pt] \omega_t \Delta t \end{pmatrix}$
+
+
+
+    //               3N+3 x 1     3N+3 x 3         3 x 1
+    VectorXd mu_bar = mu_p + Fx.transpose() * update;
+
+    // $G_t = I + F_x^\top g_t F_x$
+    MatrixXd I = MatrixXd::Identity(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3);
+    MatrixXd g_t = MatrixXd::Zero(3, 3);
+    cout << "v1: " << v1 << " v2: " << v2 << std::endl;;
+    Vector2d tmp = {-v2, v1};
+    cout << "g before:\n" << g_t << std::endl;
+    g_t.block(0, 2, 2, 1) = tmp;
+    cout << "g after:\n" << g_t << std::endl;
+    // R.topRightCorner(2, 1) = Vector2d{-v2, v1};
+    // Matrix<double, 3, 33> G_t =  I + Fx.transpose() * R * Fx;
+
+    // Matrix<double, 3, 3> cov_bar = (G_t * cov_p * G_t.transpose()) + (Fx.transpose() * R * Fx);
+
+    // Matrix<double, 3, 3> Q_t = Matrix<double, 3, 3>::Zero();
+    // Q_t.setIdentity();
+    // TODO: Finish
+}
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
 /*
@@ -198,7 +217,7 @@ sets the robot's pose to the input pose, and adds a new trajectory event from `p
 void Robot::move_to_new_pose(Pose p, Control u) {
     this->position = p.position;
     this->look_at = p.orientation;
-    this->trajectory.push_back(make_traj_position(this->position, this->look_at, u.v, u.w));
+    this->trajectory.push_back(make_traj_position(this->position.head<2>(), this->look_at, u.v, u.w));
 }
 
 double Robot::distance_to(Landmark landmark) {
@@ -217,11 +236,11 @@ void Robot::generate_lerp_trajectory(Point2d start, Point2d end, int n_steps) {
     double total_dist = start.distance_to(end);
     double step_size = total_dist / n_steps;
     this->look_to(end);
-    this->trajectory = {make_traj_position(start_pos, this->look_at, step_size, 0.0)};
+    this->trajectory = {make_traj_position(start_pos.head<2>(), this->look_at, step_size, 0.0)};
     Vector2d cur_pos = this->position;
     for (int i = 0; i < n_steps; i++) {
-        Pose new_pose = this->sample_xt(Control(0.1, 0.0), Pose(cur_pos, this->look_at));
-        this->trajectory.push_back(make_traj_position(new_pose.position, this->look_at, step_size, 0.0));
+        Vector3d new_pose = this->sample_xt(Control(0.1, 0.0), Pose(cur_pos, this->look_at));
+        this->trajectory.push_back(make_traj_position(new_pose.head<2>(), this->look_at, step_size, 0.0));
     }
 }
 

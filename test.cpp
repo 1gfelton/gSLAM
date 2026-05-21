@@ -139,6 +139,21 @@ struct TestRobot {
         r.look_at = THETA;
     }
 
+    void print_features(MatrixXd feats) {
+        cout << "Features:\n";
+        for (int i = 0; i < feats.cols(); i++) {
+            cout << "r:\t" << feats(0, i) << "\tphi:\t" << feats(1, i) << "\ts:\t" << feats(2, i) << endl;
+        }
+    }
+
+    void print_state() {
+        cout << "State vec:\n";
+        cout << "x:\t" << this->r.state_vec(0) << "\ty:\t" << this->r.state_vec(1) << "\ttheta:\t" << this->r.state_vec(2) << endl;
+        for (int i = 3; i < this->r.state_vec.size(); i+=3) {
+            cout << "r:\t" << this->r.state_vec(i) << "\tphi:\t" << this->r.state_vec(i+1) << "\ts:\t" << this->r.state_vec(i+2) << endl;
+        }
+    }
+
     void TR_test_moving() {
         cout << "Testing Robot movement...\n";
         // have a set of random directions and distances in which to move
@@ -162,7 +177,7 @@ struct TestRobot {
             // cout << "Before move:\n";
             // this->r.print();
             Pose cur_pose = Pose(this->r.position, this->r.look_at);
-            Pose new_pose = this->r.sample_xt(controls[i], cur_pose);
+            Pose new_pose = make_pose(this->r.sample_xt(controls[i], cur_pose));
 
             this->r.move_to_new_pose(new_pose, controls[i]);
             // cout << "After move:\n";
@@ -189,7 +204,7 @@ struct TestRobot {
 
         vector<Pose> poses(n_poses);
         for (int i = 0; i < n_poses; i++) {
-            poses[i] = this->r.sample_xt(ctrl, init_pose);
+            poses[i] = make_pose(this->r.sample_xt(ctrl, init_pose));
         }
         
         // write to csv
@@ -216,25 +231,32 @@ struct TestRobot {
         print_state();
     }
 
-    void print_features(MatrixXd feats) {
-        cout << "Features:\n";
-        for (int i = 0; i < feats.cols(); i++) {
-            cout << "r:\t" << feats(0, i) << "\tphi:\t" << feats(1, i) << "\ts:\t" << feats(2, i) << endl;
-        }
-    }
+    void TR_test_EKF_SLAM() {
+        // init
+        cout << "Testing EKF SLAM...\n";
+        cout << "[test.cpp]Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
+        MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
+        landmarks *= 25.0;
+        cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
+        MatrixXd features = this->r.sense_env(landmarks);
+        // print_features(features);
 
-    void print_state() {
-        cout << "State vec:\n";
-        cout << "x:\t" << this->r.state_vec(0) << "\ty:\t" << this->r.state_vec(1) << "\ttheta:\t" << this->r.state_vec(2) << endl;
-        for (int i = 3; i < this->r.state_vec.size(); i+=3) {
-            cout << "r:\t" << this->r.state_vec(i) << "\tphi:\t" << this->r.state_vec(i+1) << "\ts:\t" << this->r.state_vec(i+2) << endl;
-        }
+        // run SLAM
+        Vector2d control = {V, W};
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS + 1, 0, N_LANDMARKS);
+        VectorXd init_state_vec = VectorXd::Zero(N_LANDMARKS * 3 + 3);
+        MatrixXd init_cov = MatrixXd::Zero(N_LANDMARKS * 3 + 3, N_LANDMARKS * 3 + 3);
+        this->r.EKF_SLAM(init_state_vec, init_cov, control, features, c);
+        // to_csv(this->r.state_vec, "state_vector");
+        // print_state();
     }
 
     void run_tests() {
         // this->TR_test_moving();
         // this->TR_test_sample_next_pose();
-        this->TR_test_sensing();
+        // this->TR_test_sensing();
+        // this->TR_test_sensing();
+        this->TR_test_EKF_SLAM();
     }
 };
 

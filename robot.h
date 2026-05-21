@@ -30,14 +30,14 @@ struct Robot{
     Eigen::VectorXd state_vec;
     void print() const;
 
-    void EKF_SLAM(Eigen::Vector<double, 33> mu_p, Eigen::Matrix<double, 33, 33> cov_p, Eigen::Vector<double, 3> u_t, Eigen::Matrix<double, 2, 10> z_t, Eigen::Vector<int, 10 + 1> c_t);
+    void EKF_SLAM(Eigen::VectorXd mu_p, Eigen::MatrixXd cov_p, Eigen::Vector2d u_t, Eigen::MatrixXd z_t, Eigen::VectorXi c_t);
     void update_state_vec(Eigen::MatrixXd features);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);
     void generate_lerp_trajectory(Point2d start, Point2d end, int n_steps);
     void write_traj_to_csv();
 
-    Pose sample_xt(Control u, Pose p);
+    Eigen::Vector3d sample_xt(Control u, Pose p);
     Eigen::MatrixXd sense_env(Eigen::MatrixXd landmarks);
 
     double get_motion_probability(Pose x, Control u, Pose prev);
