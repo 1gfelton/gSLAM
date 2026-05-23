@@ -69,7 +69,7 @@ converts the landmarks to features and adds noise to them.
 Gives the feature vec at current timestep $f_t(z_t)$
 Updates the state vector of the robot
 */
-MatrixXd Robot::sense_env(MatrixXd landmarks) {
+VectorXd Robot::sense_env(MatrixXd landmarks) {
     // return the landmarks + some sensor noise
     // 3 x N
     MatrixXd features(3, N_LANDMARKS);
@@ -91,7 +91,9 @@ MatrixXd Robot::sense_env(MatrixXd landmarks) {
     MatrixXd noise = Eigen::MatrixXd::Random(features.rows(), features.cols());
     MatrixXd ans = features + noise;
     this->update_state_vec(ans);
-    return ans;
+    // convert the matrix 3 x N to vector of size 3N
+    VectorXd v = Eigen::Map<Eigen::VectorXd>(ans.data(), ans.size());
+    return v;
 }
 
 /*
@@ -134,10 +136,10 @@ EKF SLAM per Thrun et al. 2006
 mu_p: $\mu_{t-1}$ is the state vector: $[x, y, \theta, m_{1,x}, m_{1,y}, s_1, \cdots, m_{N,x}, ,m_{N,y}, s_N]^\top$
 cov_p: $\Sigma_{t-1}$ is the covariance matrix
 u_t: $u_t$ is the control at current timestep
-z_t: $z_t$ are the features at current timestep (ranges, bearings) $z_t\in\mathbb{R}^{2\times N}$
+z_t: $z_t$ are the features at current timestep (ranges, bearings, signature) $z_t\in\mathbb{R}^{3\times N}$
 c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
 */
-void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, VectorXi c_t) {
+void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, VectorXi c_t) {
     // define R here (TODO: remove this and define as global once)
     MatrixXd Rt = MatrixXd::Identity(3, 3);
     Rt.diagonal() = Vector3d{SIGMA_X, SIGMA_Y, SIGMA_THETA};
@@ -182,6 +184,19 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, MatrixXd z_t, 
     MatrixXd Qt = MatrixXd::Identity(3, 3);
     Qt.diagonal() = Vector3d{SIGMA_R, SIGMA_PHI, SIGMA_S};
     cout << "Q:\n" << Qt << std::endl;
+
+    for (int i = 0; i < z_t.size(); i+=3) {
+        // get the correspondence
+        double j = c_t(i);
+        // if j hasn't been seen before:
+            // int theta = mu_bar(i + 2)
+            // int phi = z_t(i + 1)
+            // int r = z_t(i)
+            // mu_bar(i) += r * cos(phi + theta);
+            // mu_bar(i + 1) += r * sin(phi + theta);
+        Vector2d d = mu_bar(seq(j, j + 1)) - mu_bar(seq(i, i + 1));
+        cout << "d:\n" << d << std::endl;
+    }
     // TODO: Finish
 }
 

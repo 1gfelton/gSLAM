@@ -30,7 +30,7 @@ struct Robot{
     Eigen::VectorXd state_vec;
     void print() const;
 
-    void EKF_SLAM(Eigen::VectorXd mu_p, Eigen::MatrixXd cov_p, Eigen::Vector2d u_t, Eigen::MatrixXd z_t, Eigen::VectorXi c_t);
+    void EKF_SLAM(Eigen::VectorXd mu_p, Eigen::MatrixXd cov_p, Eigen::Vector2d u_t, Eigen::VectorXd z_t, Eigen::VectorXi c_t);
     void update_state_vec(Eigen::MatrixXd features);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);
@@ -38,7 +38,7 @@ struct Robot{
     void write_traj_to_csv();
 
     Eigen::Vector3d sample_xt(Control u, Pose p);
-    Eigen::MatrixXd sense_env(Eigen::MatrixXd landmarks);
+    Eigen::VectorXd sense_env(Eigen::MatrixXd landmarks);
 
     double get_motion_probability(Pose x, Control u, Pose prev);
     double distance_to(Landmark landmark);
