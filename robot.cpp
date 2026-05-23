@@ -226,9 +226,19 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         MatrixXd tmp(3, 6);
         tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
         cout << "tmp:\n" << tmp << std::endl;
-        MatrixXd Ht = (1 / q) * tmp * Fxj;
+
+        MatrixXd Ht = (1 / q) * tmp * Fxj; // 3 x 3N + 3
         cout << "Ht:\n" << Ht << std::endl;
-        // MatrixXd K = cov_bar * Ht.tranpose() * (Ht * cov_bar * Ht.tranpose() + Qt).inverse();
+        // $K^i_t = \bar{\Sigma}_tH_t^{i\top}(H^i_t\bar{\Sigma}_tH_t^{i\top}+Q_t)^{-1}$
+
+        // TODO: figure out shapes from matmul
+        //                      3N+3x3          3x3    
+        MatrixXd K = cov_bar * Ht.transpose() * (Ht * cov_bar * Ht.transpose() + Qt).inverse();
+        cout << "K:\n" << K << std::endl;
+        mu_bar += K * (z_t - z_hat);
+        cout << "mu_bar:\n" << mu_bar << std::endl;
+        cov_bar = (MatrixXd::Identity(K.rows(), K.cols()) - K * Ht) * cov_bar;
+        cout << "cov_bar:\n" << cov_bar << std::endl;
     }
     // TODO: Finish
 }
