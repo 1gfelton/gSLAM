@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 #include <fstream>
 #include <math.h>
 #include "robot.h"
@@ -185,17 +186,49 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     Qt.diagonal() = Vector3d{SIGMA_R, SIGMA_PHI, SIGMA_S};
     cout << "Q:\n" << Qt << std::endl;
 
-    for (int i = 0; i < z_t.size(); i+=3) {
+    for (int i = 1; i < N_LANDMARKS; i++) {
         // get the correspondence
-        double j = c_t(i);
-        // if j hasn't been seen before:
-            // int theta = mu_bar(i + 2)
-            // int phi = z_t(i + 1)
-            // int r = z_t(i)
-            // mu_bar(i) += r * cos(phi + theta);
-            // mu_bar(i + 1) += r * sin(phi + theta);
-        Vector2d d = mu_bar(seq(j, j + 1)) - mu_bar(seq(i, i + 1));
+        int j = c_t(i);
+        cout << "c: " << j << std::endl;
+        int ii = j * 3; // mu_bar \in R^3N
+        double theta = mu_bar(2);
+        // handle landmarks that haven't yet been seen
+        bool seen = ((double)isclose(mu_bar(i * 3), 0.0) && isclose((double)mu_bar(i * 3 + 1), 0.0) && isclose((double)mu_bar(i * 3 + 2), 0.0));
+        if (seen == true) {
+            cout << "Seen!" << std::endl;
+            double theta = mu_bar(2);
+            cout << "Theta: " << theta << std::endl;
+            double phi = z_t(ii + 1);
+            cout << "PHI: " << phi << std::endl;
+            double r = z_t(ii);
+            cout << "r: " << r << std::endl;
+            mu_bar(ii) = mu_bar(0) + r * cos(phi + theta); // x
+            cout << "x: " << mu_bar(0) << std::endl;
+            mu_bar(ii + 1) = mu_bar(1) + r * sin(phi + theta); // y
+            cout << "y: " << mu_bar(1) << std::endl;
+            mu_bar(ii + 2) = z_t(ii + 2); // signature
+            cout << "sig: " << z_t(ii + 2) << std::endl;
+        }
+
+        Vector2d d = mu_bar(seq(ii, ii + 1)) - mu_bar(seq(0, 1));
         cout << "d:\n" << d << std::endl;
+        double q = d.squaredNorm();
+        if (isclose(q, 0.0)) {
+            throw std::runtime_error("q is zero");
+        }
+        cout << "d:\n" << d << std::endl;
+        cout << "q:\n" << q << std::endl;
+        Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - theta, mu_bar(i * 3 + 2)};
+        MatrixXd Fxj = MatrixXd::Zero(6, 3 * N_LANDMARKS + 3);
+        Fxj.block(0, 0, 3, 3).setIdentity();
+        Fxj.block(3, 3 * j, 3, 3).setIdentity();
+        cout << "Fxj:\n" << Fxj << std::endl;
+        MatrixXd tmp(3, 6);
+        tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
+        cout << "tmp:\n" << tmp << std::endl;
+        MatrixXd Ht = (1 / q) * tmp * Fxj;
+        cout << "Ht:\n" << Ht << std::endl;
+        // MatrixXd K = cov_bar * Ht.tranpose() * (Ht * cov_bar * Ht.tranpose() + Qt).inverse();
     }
     // TODO: Finish
 }
