@@ -9,12 +9,13 @@
     "N_SAMPLES"     : 500,
     "THETA"         : 0.0,
     "W"             : 20.0,
-    "V"             : 20.0,
-    "N_LANDMARKS"   : 10,
+    "V"             : 100.0,
+    "N_LANDMARKS"   : 50,
     "SIGMA_R"       : 0.1,
     "SIGMA_PHI"     : 0.1,
     "SIGMA_S"       : 0.1,
     "SIGMA_X"       : 0.1,
     "SIGMA_Y"       : 0.1,
-    "SIGMA_THETA"   : 0.1
+    "SIGMA_THETA"   : 0.1,
+    "N_STEPS"       : 10
 }

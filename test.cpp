@@ -7,6 +7,7 @@
 #include <bits/stdc++.h>
 #include <fstream>
 #include <Eigen/Dense>
+#include <fmt/core.h>
 
 using namespace std;
 using namespace Eigen;
@@ -245,10 +246,12 @@ struct TestRobot {
         VectorXi c = VectorXi::LinSpaced(N_LANDMARKS + 1, 0, N_LANDMARKS);
         VectorXd init_state_vec = VectorXd::Zero(N_LANDMARKS * 3 + 3);
         MatrixXd init_cov = MatrixXd::Zero(N_LANDMARKS * 3 + 3, N_LANDMARKS * 3 + 3);
-        this->r.EKF_SLAM(init_state_vec, init_cov, control, features, c);
-
-        // to_csv(this->r.state_vec, "state_vector");
-        // print_state();
+        this->r.state_vec = init_state_vec; this->r.covariance = init_cov;
+        for (int i = 0; i < N_STEPS; i++) {
+            this->r.EKF_SLAM(this->r.state_vec, this->r.covariance, control, features, c);
+            string filename = fmt::format("state_vector_t{}", i);
+            to_csv(this->r.state_vec, filename);
+        }
     }
 
     void run_tests() {

@@ -17,11 +17,11 @@ using std::vector;
 using std::pair;
 
 // Init Methods
-Robot::Robot() : position(0.0, 0.0), look_at(0.0) {}
-Robot::Robot(const double _x, const double _y) : position(_x, _y), look_at(0.0) {}
-Robot::Robot(const double _x, const double _y, const double _look_at) : position(_x, _y), look_at(_look_at) {}
+Robot::Robot() : position(0.0, 0.0), look_at(0.0), covariance{MatrixXd::Zero(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3)} {}
+Robot::Robot(const double _x, const double _y) : position(_x, _y), look_at(0.0), covariance{MatrixXd::Zero(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3)}{}
+Robot::Robot(const double _x, const double _y, const double _look_at) : position(_x, _y), look_at(_look_at), covariance{MatrixXd::Zero(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3)}{}
 // set position to the most recent point in the trajectory
-Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), look_at(0.0) {}
+Robot::Robot(const vector<pair<Pose, Control>> t) : trajectory(t), position(t[t.size() - 1].first.position), look_at(0.0), covariance{MatrixXd::Zero(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3)}{}
 
 /* apply control 
  all of this math is from Probabilistic Robotics by Thrun et al., 2006
@@ -135,13 +135,12 @@ Vector3d Robot::sample_xt(Control u, Pose p) {
 /*
 EKF SLAM per Thrun et al. 2006
 mu_p: $\mu_{t-1}$ is the state vector: $[x, y, \theta, m_{1,x}, m_{1,y}, s_1, \cdots, m_{N,x}, ,m_{N,y}, s_N]^\top$
-cov_p: $\Sigma_{t-1}$ is the covariance matrix
+cov_p: $\Sigma_{t-1}$ is the covariance matrix (3N + 3 x 3N + 3)
 u_t: $u_t$ is the control at current timestep
 z_t: $z_t$ are the features at current timestep (ranges, bearings, signature) $z_t\in\mathbb{R}^{3\times N}$
 c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots,N+1\}$
 */
 void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, VectorXi c_t) {
-    // define R here (TODO: remove this and define as global once)
     MatrixXd Rt = MatrixXd::Identity(3, 3);
     Rt.diagonal() = Vector3d{SIGMA_X, SIGMA_Y, SIGMA_THETA};
     cout << "R:\n" << Rt << std::endl;
@@ -167,7 +166,7 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
 
 
     //               3N+3 x 1     3N+3 x 3         3 x 1
-    VectorXd mu_bar = mu_p + Fx.transpose() * update;
+    VectorXd mu_bar = mu_p + Fx.transpose() * update; // 3N+3 x 1
 
     // $G_t = I + F_x^\top g_t F_x$
     MatrixXd I = MatrixXd::Identity(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3);
@@ -175,11 +174,11 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     cout << "v1: " << v1 << " v2: " << v2 << std::endl;;
     Vector2d tmp = {-v2, v1};
     g_t.block(0, 2, 2, 1) = tmp;
-    MatrixXd Gt = I + Fx.transpose() * g_t * Fx;
+    MatrixXd Gt = I + Fx.transpose() * g_t * Fx; // 3N+3 x 3N+3
     cout << "Gt:\n" << Gt << std::endl;
 
     // $\bar{\Sigma}_t = G_t\Sigma_{t-1}G_t^\top + F_x^\top R_t F_x$
-    MatrixXd cov_bar = (Gt * cov_p * Gt.transpose()) + (Fx.transpose() * Rt * Fx);
+    MatrixXd cov_bar = (Gt * cov_p * Gt.transpose()) + (Fx.transpose() * Rt * Fx); // 3N+3 x 3N+3
     cout << "cov_bar:\n" << cov_bar << std::endl;
 
     MatrixXd Qt = MatrixXd::Identity(3, 3);
@@ -193,9 +192,9 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         int ii = j * 3; // mu_bar \in R^3N
         double theta = mu_bar(2);
         // handle landmarks that haven't yet been seen
-        bool seen = ((double)isclose(mu_bar(i * 3), 0.0) && isclose((double)mu_bar(i * 3 + 1), 0.0) && isclose((double)mu_bar(i * 3 + 2), 0.0));
-        if (seen == true) {
-            cout << "Seen!" << std::endl;
+        bool not_seen = ((double)isclose(mu_bar(i * 3), 0.0) && isclose((double)mu_bar(i * 3 + 1), 0.0) && isclose((double)mu_bar(i * 3 + 2), 0.0));
+        if (not_seen == true) {
+            cout << "Haven't seen this feature before!" << std::endl;
             double theta = mu_bar(2);
             cout << "Theta: " << theta << std::endl;
             double phi = z_t(ii + 1);
@@ -213,11 +212,13 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         Vector2d d = mu_bar(seq(ii, ii + 1)) - mu_bar(seq(0, 1));
         cout << "d:\n" << d << std::endl;
         double q = d.squaredNorm();
+        cout << "d:\n" << d << std::endl;
+        cout << "q:\n" << q << std::endl;
+
         if (isclose(q, 0.0)) {
             throw std::runtime_error("q is zero");
         }
-        cout << "d:\n" << d << std::endl;
-        cout << "q:\n" << q << std::endl;
+
         Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - theta, mu_bar(i * 3 + 2)};
         MatrixXd Fxj = MatrixXd::Zero(6, 3 * N_LANDMARKS + 3);
         Fxj.block(0, 0, 3, 3).setIdentity();
@@ -232,20 +233,22 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         // $K^i_t = \bar{\Sigma}_tH_t^{i\top}(H^i_t\bar{\Sigma}_tH_t^{i\top}+Q_t)^{-1}$
 
         // TODO: figure out shapes from matmul
-        //                      3N+3x3          3x3    
-        MatrixXd K = cov_bar * Ht.transpose() * (Ht * cov_bar * Ht.transpose() + Qt).inverse();
-        cout << "K:\n" << K << std::endl;
-        mu_bar += K * (z_t - z_hat);
+        //          3N+3x3N+3    3N+3x3         3x3N+3  3N+3x3N+3  3N+3x3        3x3 
+        MatrixXd K = cov_bar * Ht.transpose() * (Ht * cov_bar * Ht.transpose() + Qt).inverse(); // 3N+3 x 3
+        cout << "K:\n" << K << std::endl; 
+        //    3N+3x3   3N+3   3N+3
+        mu_bar += K * (z_t(seq(i*3, i*3 + 2)) - z_hat);
         cout << "mu_bar:\n" << mu_bar << std::endl;
-        cov_bar = (MatrixXd::Identity(K.rows(), K.cols()) - K * Ht) * cov_bar;
-        cout << "cov_bar:\n" << cov_bar << std::endl;
+        cov_bar = (MatrixXd::Identity(K.rows(), Ht.cols()) - K * Ht) * cov_bar;
     }
-    // TODO: Finish
+    // update $\mu_t = \bar{\mu}_t$ and $\Sigma_t = \bar{\Sigma}_t$
+    this->state_vec = mu_bar;
+    this->covariance = cov_bar;
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
 /*
-`motion_model_velocity` from Thuring et al. Computes the probability of pose `x` given `u` and `prev`
+`motion_model_velocity` from Thrun et al. Computes the probability of pose `x` given `u` and `prev`
 */
     double xx = prev.position.x();
     double x_prime = x.position.x();

@@ -28,6 +28,7 @@ struct Robot{
     Eigen::Vector2d position;
     std::vector<std::pair<Pose, Control>> trajectory;
     Eigen::VectorXd state_vec;
+    Eigen::MatrixXd covariance;
     void print() const;
 
     void EKF_SLAM(Eigen::VectorXd mu_p, Eigen::MatrixXd cov_p, Eigen::Vector2d u_t, Eigen::VectorXd z_t, Eigen::VectorXi c_t);

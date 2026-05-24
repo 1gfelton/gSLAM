@@ -37,4 +37,5 @@ namespace CONFIG {
     inline double SIGMA_THETA   = cfg["SIGMA_THETA"];
 
     inline int STATE_VEC_SIZE   = ((int)cfg["N_LANDMARKS"] * 3) + 3;
+    inline int N_STEPS          = cfg["N_STEPS"];
 }
