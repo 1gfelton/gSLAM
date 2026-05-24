@@ -244,7 +244,7 @@ struct TestRobot {
 
         // run SLAM
         Vector2d control = {V, W};
-        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS + 1, 0, N_LANDMARKS);
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
         VectorXd init_state_vec = VectorXd::Zero(N_LANDMARKS * 3 + 3);
         MatrixXd init_cov = MatrixXd::Zero(N_LANDMARKS * 3 + 3, N_LANDMARKS * 3 + 3);
         this->r.state_vec = init_state_vec; this->r.covariance = init_cov;

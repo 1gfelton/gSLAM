@@ -186,34 +186,36 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
 
     MatrixXd Qt = MatrixXd::Identity(3, 3);
     Qt.diagonal() = Vector3d{SIGMA_R, SIGMA_PHI, SIGMA_S};
-
-    for (int i = 1; i < N_LANDMARKS; i++) {
+    // for feature i, we get landmark j from the correspondence value
+    for (int i = 0; i < N_LANDMARKS; i++) {
         // get the correspondence
-        int j = c_t(i);
-        int ii = j * 3; // mu_bar \in R^3N
+        int j = c_t(i) * 3;
         double theta = mu_bar(2);
         // handle landmarks that haven't yet been seen
-        bool not_seen = ((double)isclose(mu_bar(i * 3), 0.0) && isclose((double)mu_bar(i * 3 + 1), 0.0) && isclose((double)mu_bar(i * 3 + 2), 0.0));
+        cout << "j: " << j << std::endl;
+        bool not_seen = (isclose((double)mu_bar(j), 0.0) && 
+                        isclose((double)mu_bar(j + 1), 0.0) && 
+                        isclose((double)mu_bar(j + 2), 0.0));
         if (not_seen == true) {
             double theta = mu_bar(2);
-            double phi = z_t(ii + 1);
-            double r = z_t(ii);
-            mu_bar(ii) = mu_bar(0) + r * cos(phi + theta); // x
-            mu_bar(ii + 1) = mu_bar(1) + r * sin(phi + theta); // y
-            mu_bar(ii + 2) = z_t(ii + 2); // signature
+            double phi = z_t(i * 3 + 1);
+            double r = z_t(i * 3);
+            mu_bar(j) = mu_bar(0) + r * cos(phi + theta); // x
+            mu_bar(j + 1) = mu_bar(1) + r * sin(phi + theta); // y
+            mu_bar(j + 2) = z_t(i * 3 + 2); // signature
         }
 
-        Vector2d d = mu_bar(seq(ii, ii + 1)) - mu_bar(seq(0, 1));
+        Vector2d d = mu_bar(seq(j, j + 1)) - mu_bar(seq(0, 1));
         double q = d.squaredNorm();
 
         if (isclose(q, 0.0)) {
             throw std::runtime_error("q is zero");
         }
 
-        Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - theta, mu_bar(i * 3 + 2)};
+        Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - theta, mu_bar(j + 2)};
         MatrixXd Fxj = MatrixXd::Zero(6, 3 * N_LANDMARKS + 3);
         Fxj.block(0, 0, 3, 3).setIdentity();
-        Fxj.block(3, 3 * j, 3, 3).setIdentity();
+        Fxj.block(3, j, 3, 3).setIdentity();
         // cout << "Fxj:\n" << Fxj << std::endl;
         MatrixXd tmp(3, 6);
         tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
@@ -224,7 +226,7 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         //          3N+3x3N+3    3N+3x3         3x3N+3  3N+3x3N+3  3N+3x3        3x3 
         MatrixXd K = cov_bar * Ht.transpose() * (Ht * cov_bar * Ht.transpose() + Qt).inverse(); // 3N+3 x 3
         //    3N+3x3   3N+3   3N+3
-        mu_bar += K * (z_t(seq(i*3, i*3 + 2)) - z_hat);
+        mu_bar += K * (z_t(seq(i * 3, i * 3 + 2)) - z_hat);
         cov_bar = (MatrixXd::Identity(K.rows(), Ht.cols()) - K * Ht) * cov_bar;
     }
     // update $\mu_t = \bar{\mu}_t$ and $\Sigma_t = \bar{\Sigma}_t$
