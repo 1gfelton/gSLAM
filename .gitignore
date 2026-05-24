@@ -1,3 +1,4 @@
 *.ghc
 *.csv
+csvs/
 *.log
