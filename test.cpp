@@ -238,7 +238,7 @@ struct TestRobot {
         cout << "Testing EKF SLAM...\n";
         cout << "[test.cpp]Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
         MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
-        landmarks *= 25.0;
+        landmarks *= 2.0;
         cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
         MatrixXd features = this->r.sense_env(landmarks);
 

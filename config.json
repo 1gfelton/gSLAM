@@ -9,7 +9,7 @@
     "N_SAMPLES"     : 500,
     "THETA"         : 0.0,
     "W"             : 0.0,
-    "V"             : 10.0,
+    "V"             : 100.0,
     "N_LANDMARKS"   : 5,
     "SIGMA_R"       : 0.1,
     "SIGMA_PHI"     : 0.1,

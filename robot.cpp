@@ -157,11 +157,11 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     if (isclose(w, 0.0)) {
         frac = v;
     } else {
-        double frac = (v / w);
+        frac = (v / w);
     }
     double theta = mu_p[2];
     double v1 = (-frac * sin(theta)) + (frac * sin(theta + w * DT));
-    double v2 = (frac * cos(theta)) - (frac * sin(theta + w * DT));
+    double v2 = (frac * cos(theta)) - (frac * cos(theta + w * DT));
     double v3 = w * DT;
     Vector3d update({v1, v2, v3});
 
