@@ -120,12 +120,12 @@ Vector3d Robot::sample_xt(Control u, Pose p) {
     double new_x, new_y;
     cout << "w_hat: " << w_hat << std::endl;
     // w == 0
-    if (fabs(w_hat) < 1e-4) {
-        new_x = p.position.x() - (v_hat * sin(to_radians(p.orientation))) + (v_hat * sin(to_radians(p.orientation + (w_hat * DT))));
-        new_y = p.position.y() + (v_hat * cos(to_radians(p.orientation))) - (v_hat * cos(to_radians(p.orientation + (w_hat * DT))));
+    if (isclose(w_hat, 0.0)) {
+        new_x = p.position.x() - (v_hat * sin((p.orientation))) + (v_hat * sin((p.orientation + (w_hat * DT))));
+        new_y = p.position.y() + (v_hat * cos((p.orientation))) - (v_hat * cos((p.orientation + (w_hat * DT))));
     } else {
-        new_x = p.position.x() - ((v_hat / w_hat) * sin(to_radians(p.orientation))) + ((v_hat / w_hat) * sin(to_radians(p.orientation + (w_hat * DT))));
-        new_y = p.position.y() + ((v_hat / w_hat) * cos(to_radians(p.orientation))) - ((v_hat / w_hat) * cos(to_radians(p.orientation + (w_hat * DT))));
+        new_x = p.position.x() - ((v_hat / w_hat) * sin((p.orientation))) + ((v_hat / w_hat) * sin((p.orientation + (w_hat * DT))));
+        new_y = p.position.y() + ((v_hat / w_hat) * cos((p.orientation))) - ((v_hat / w_hat) * cos((p.orientation + (w_hat * DT))));
     }
     double new_theta = p.orientation + (w_hat * DT) + (g_hat * DT);
     Vector3d res({new_x, new_y, new_theta});
@@ -143,7 +143,6 @@ c_t: $c_t$ are the known correspondences at current timestep $c_t^i\in\{1,\cdots
 void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, VectorXi c_t) {
     MatrixXd Rt = MatrixXd::Identity(3, 3);
     Rt.diagonal() = Vector3d{SIGMA_X, SIGMA_Y, SIGMA_THETA};
-    cout << "R:\n" << Rt << std::endl;
 
     // $3\times 3N + 3$
     MatrixXd Fx = MatrixXd::Zero(3, 3 * N_LANDMARKS + 3);
@@ -151,8 +150,15 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     Fx.topLeftCorner(3, 3).setIdentity();
 
     // calculate noise-free next pose
-    double frac = (u_t[0] / u_t[1]);
+    double v = u_t[0];
     double w = u_t[1];
+    double frac;
+    // check for 0 angular velocity
+    if (isclose(w, 0.0)) {
+        frac = v;
+    } else {
+        double frac = (v / w);
+    }
     double theta = mu_p[2];
     double v1 = (-frac * sin(theta)) + (frac * sin(theta + w * DT));
     double v2 = (frac * cos(theta)) - (frac * sin(theta + w * DT));
@@ -171,49 +177,34 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     // $G_t = I + F_x^\top g_t F_x$
     MatrixXd I = MatrixXd::Identity(3 * N_LANDMARKS + 3, 3 * N_LANDMARKS + 3);
     MatrixXd g_t = MatrixXd::Zero(3, 3);
-    cout << "v1: " << v1 << " v2: " << v2 << std::endl;;
     Vector2d tmp = {-v2, v1};
     g_t.block(0, 2, 2, 1) = tmp;
     MatrixXd Gt = I + Fx.transpose() * g_t * Fx; // 3N+3 x 3N+3
-    cout << "Gt:\n" << Gt << std::endl;
 
     // $\bar{\Sigma}_t = G_t\Sigma_{t-1}G_t^\top + F_x^\top R_t F_x$
     MatrixXd cov_bar = (Gt * cov_p * Gt.transpose()) + (Fx.transpose() * Rt * Fx); // 3N+3 x 3N+3
-    cout << "cov_bar:\n" << cov_bar << std::endl;
 
     MatrixXd Qt = MatrixXd::Identity(3, 3);
     Qt.diagonal() = Vector3d{SIGMA_R, SIGMA_PHI, SIGMA_S};
-    cout << "Q:\n" << Qt << std::endl;
 
     for (int i = 1; i < N_LANDMARKS; i++) {
         // get the correspondence
         int j = c_t(i);
-        cout << "c: " << j << std::endl;
         int ii = j * 3; // mu_bar \in R^3N
         double theta = mu_bar(2);
         // handle landmarks that haven't yet been seen
         bool not_seen = ((double)isclose(mu_bar(i * 3), 0.0) && isclose((double)mu_bar(i * 3 + 1), 0.0) && isclose((double)mu_bar(i * 3 + 2), 0.0));
         if (not_seen == true) {
-            cout << "Haven't seen this feature before!" << std::endl;
             double theta = mu_bar(2);
-            cout << "Theta: " << theta << std::endl;
             double phi = z_t(ii + 1);
-            cout << "PHI: " << phi << std::endl;
             double r = z_t(ii);
-            cout << "r: " << r << std::endl;
             mu_bar(ii) = mu_bar(0) + r * cos(phi + theta); // x
-            cout << "x: " << mu_bar(0) << std::endl;
             mu_bar(ii + 1) = mu_bar(1) + r * sin(phi + theta); // y
-            cout << "y: " << mu_bar(1) << std::endl;
             mu_bar(ii + 2) = z_t(ii + 2); // signature
-            cout << "sig: " << z_t(ii + 2) << std::endl;
         }
 
         Vector2d d = mu_bar(seq(ii, ii + 1)) - mu_bar(seq(0, 1));
-        cout << "d:\n" << d << std::endl;
         double q = d.squaredNorm();
-        cout << "d:\n" << d << std::endl;
-        cout << "q:\n" << q << std::endl;
 
         if (isclose(q, 0.0)) {
             throw std::runtime_error("q is zero");
@@ -223,22 +214,17 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         MatrixXd Fxj = MatrixXd::Zero(6, 3 * N_LANDMARKS + 3);
         Fxj.block(0, 0, 3, 3).setIdentity();
         Fxj.block(3, 3 * j, 3, 3).setIdentity();
-        cout << "Fxj:\n" << Fxj << std::endl;
+        // cout << "Fxj:\n" << Fxj << std::endl;
         MatrixXd tmp(3, 6);
         tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
-        cout << "tmp:\n" << tmp << std::endl;
 
         MatrixXd Ht = (1 / q) * tmp * Fxj; // 3 x 3N + 3
-        cout << "Ht:\n" << Ht << std::endl;
         // $K^i_t = \bar{\Sigma}_tH_t^{i\top}(H^i_t\bar{\Sigma}_tH_t^{i\top}+Q_t)^{-1}$
 
-        // TODO: figure out shapes from matmul
         //          3N+3x3N+3    3N+3x3         3x3N+3  3N+3x3N+3  3N+3x3        3x3 
         MatrixXd K = cov_bar * Ht.transpose() * (Ht * cov_bar * Ht.transpose() + Qt).inverse(); // 3N+3 x 3
-        cout << "K:\n" << K << std::endl; 
         //    3N+3x3   3N+3   3N+3
         mu_bar += K * (z_t(seq(i*3, i*3 + 2)) - z_hat);
-        cout << "mu_bar:\n" << mu_bar << std::endl;
         cov_bar = (MatrixXd::Identity(K.rows(), Ht.cols()) - K * Ht) * cov_bar;
     }
     // update $\mu_t = \bar{\mu}_t$ and $\Sigma_t = \bar{\Sigma}_t$
@@ -255,8 +241,8 @@ double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
     double yy = prev.position.y();
     double y_prime = x.position.y();
 
-    double num = (xx - x_prime * cos(to_radians(this->look_at))) + ((yy - y_prime) * sin(to_radians(this->look_at)));
-    double denom = ((yy - y_prime) * cos(to_radians(this->look_at))) - ((xx - x_prime) * sin(to_radians(this->look_at)));
+    double num = (xx - x_prime * cos((this->look_at))) + ((yy - y_prime) * sin((this->look_at)));
+    double denom = ((yy - y_prime) * cos((this->look_at))) - ((xx - x_prime) * sin((this->look_at)));
     double mu = (1/2) * (num / denom);
 
     // $x^*$

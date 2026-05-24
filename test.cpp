@@ -120,12 +120,13 @@ void printj(Robot r) {
 
 void to_csv(VectorXd v, string file) {
     cout << "Writing to csv file " << file + ".csv..." << endl;
-    string filename = file + ".csv";
-    std::ofstream out(filename);
+    string filename = "./csvs/" + file + ".csv";
+    std::ofstream out(filename, std::ofstream::trunc);
     out << "\"x\",\"y\",\"theta\"\n";
     for (int i = 0; i < v.size(); i+=3) {
         out << v(i) << ',' << v(i + 1) << ',' << v(i + 2) << "\n";
     }
+    out.close();
     cout << "Wrote " << v.size()/3 << " lines to " << file + ".csv..." << endl;
 }
 

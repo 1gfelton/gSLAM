@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.h"
 #include <random>
 #include <fstream>
 #include <math.h>
@@ -27,8 +28,8 @@ namespace CONFIG {
     inline double SIGMA_S       = cfg["SIGMA_S"];
 
     inline double N_SAMPLES     = cfg["N_SAMPLES"];
-    inline double THETA         = cfg["THETA"];
-    inline double W             = cfg["W"];
+    inline double THETA         = to_radians(cfg["THETA"]);
+    inline double W             = cfg["W"]; // rad / s
     inline double V             = cfg["V"];
     inline int N_LANDMARKS      = cfg["N_LANDMARKS"];
 
