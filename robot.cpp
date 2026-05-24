@@ -91,7 +91,7 @@ VectorXd Robot::sense_env(MatrixXd landmarks) {
     // 3 x N
     MatrixXd noise = Eigen::MatrixXd::Random(features.rows(), features.cols());
     MatrixXd ans = features + noise;
-    this->update_state_vec(ans);
+    // this->update_state_vec(ans);
     // convert the matrix 3 x N to vector of size 3N
     VectorXd v = Eigen::Map<Eigen::VectorXd>(ans.data(), ans.size());
     return v;
@@ -121,8 +121,8 @@ Vector3d Robot::sample_xt(Control u, Pose p) {
     cout << "w_hat: " << w_hat << std::endl;
     // w == 0
     if (isclose(w_hat, 0.0)) {
-        new_x = p.position.x() - (v_hat * sin((p.orientation))) + (v_hat * sin((p.orientation + (w_hat * DT))));
-        new_y = p.position.y() + (v_hat * cos((p.orientation))) - (v_hat * cos((p.orientation + (w_hat * DT))));
+        new_x = p.position.x() + v_hat * sin(p.orientation) * DT;
+        new_y = p.position.y() - v_hat * cos(p.orientation) * DT;
     } else {
         new_x = p.position.x() - ((v_hat / w_hat) * sin((p.orientation))) + ((v_hat / w_hat) * sin((p.orientation + (w_hat * DT))));
         new_y = p.position.y() + ((v_hat / w_hat) * cos((p.orientation))) - ((v_hat / w_hat) * cos((p.orientation + (w_hat * DT))));
@@ -152,16 +152,18 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     // calculate noise-free next pose
     double v = u_t[0];
     double w = u_t[1];
-    double frac;
+    double theta = mu_p[2];
+    double v1, v2;
     // check for 0 angular velocity
     if (isclose(w, 0.0)) {
-        frac = v;
+        v1 = v * cos(theta) * DT;
+        v2 = v * -sin(theta) * DT;
+        // v1 = (-v * sin(theta)) + (v * sin(theta + w * DT));
+        // v2 = (v * cos(theta)) - (v * cos(theta + w * DT));
     } else {
-        frac = (v / w);
+        v1 = (-v/w * sin(theta)) + (v/w * sin(theta + w * DT));
+        v2 = (v/w * cos(theta)) - (v/w * cos(theta + w * DT));
     }
-    double theta = mu_p[2];
-    double v1 = (-frac * sin(theta)) + (frac * sin(theta + w * DT));
-    double v2 = (frac * cos(theta)) - (frac * cos(theta + w * DT));
     double v3 = w * DT;
     Vector3d update({v1, v2, v3});
 
@@ -192,7 +194,6 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         int j = c_t(i) * 3;
         double theta = mu_bar(2);
         // handle landmarks that haven't yet been seen
-        cout << "j: " << j << std::endl;
         bool not_seen = (isclose((double)mu_bar(j), 0.0) && 
                         isclose((double)mu_bar(j + 1), 0.0) && 
                         isclose((double)mu_bar(j + 2), 0.0));
@@ -216,7 +217,6 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
         MatrixXd Fxj = MatrixXd::Zero(6, 3 * N_LANDMARKS + 3);
         Fxj.block(0, 0, 3, 3).setIdentity();
         Fxj.block(3, j, 3, 3).setIdentity();
-        // cout << "Fxj:\n" << Fxj << std::endl;
         MatrixXd tmp(3, 6);
         tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
 
