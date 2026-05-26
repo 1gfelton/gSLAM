@@ -42,9 +42,9 @@ struct Robot{
     Eigen::Vector3d sample_xt(Control u, Pose p);
     Eigen::VectorXd sense_env(Eigen::MatrixXd landmarks);
 
-    Eigen::VectorXd Graph_SLAM(Eigen::Vector2d u_t, Eigen::VectorXd z_t, Eigen::VectorXi c_t);
+    Eigen::VectorXd Graph_SLAM(Eigen::VectorXd u, Eigen::VectorXd z_t, Eigen::VectorXi c_t);
     Eigen::VectorXd Graph_SLAM_init(Eigen::VectorXd u_t);
-    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Graph_SLAM_linearize(Eigen::VectorXd u_t, Eigen::VectorXd z_t, Eigen::VectorXd c_t, Eigen::VectorXd mu);
+    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Graph_SLAM_linearize(Eigen::VectorXd u_t, Eigen::VectorXd z_t, Eigen::VectorXi c_t, Eigen::VectorXd mu);
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Graph_SLAM_reduce(Eigen::MatrixXd omega, Eigen::MatrixXd xi);
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Graph_SLAM_solve(Eigen::MatrixXd omega_, Eigen::MatrixXd xi_, Eigen::MatrixXd omega, Eigen::MatrixXd xi);
 

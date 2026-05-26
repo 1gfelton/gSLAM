@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 #include <random>
 #include <fstream>
+#include <string>
 #include "control.h"
 #include "pose.h"
 double to_radians(double deg);
@@ -12,3 +13,4 @@ std::piecewise_linear_distribution<double> triangular_distribution(double mu, do
 double sample_triangular_dist(double mu, double sigma2);
 double triangular_prob(double mu, double sigma2);
 Pose make_pose(Eigen::Vector3d v);
+std::string to_str(const Eigen::MatrixXd &m);

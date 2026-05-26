@@ -4,6 +4,7 @@
 #include "robot.h"
 #include "utils.h"
 #include "config.h"
+#include <spdlog/spdlog.h>
 #include <bits/stdc++.h>
 #include <fstream>
 #include <Eigen/Dense>
@@ -235,12 +236,11 @@ struct TestRobot {
 
     void TR_test_EKF_SLAM() {
         // init
-        cout << "Testing EKF SLAM...\n";
+        SPDLOG_INFO("Testing EKF SLAM...");
         cout << "[test.cpp]Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
         MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
         landmarks *= 2.0;
         cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
-
         // run SLAM
         Vector2d control = {V, W};
         VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
@@ -257,12 +257,27 @@ struct TestRobot {
         }
     }
 
+    void TR_test_Graph_SLAM() {
+        SPDLOG_INFO("Testing Graph SLAM...\n");
+        SPDLOG_INFO("Robot Location: {}, {}", this->r.position.x(), this->r.position.y());
+        // init controls
+        int n_controls = 10;
+        VectorXd controls = VectorXd::Zero(n_controls * 2);
+        controls(seq(0, last, 2)) = VectorXd::Constant(n_controls, V);
+        controls(seq(1, last, 2)) = VectorXd::Constant(n_controls, W);
+        SPDLOG_INFO("Controls:\n{}", to_str(controls));
+
+        VectorXd mu = this->r.Graph_SLAM_init(controls);
+        SPDLOG_INFO("mu:\n{}", to_str(mu));
+    }
+
     void run_tests() {
         // this->TR_test_moving();
         // this->TR_test_sample_next_pose();
         // this->TR_test_sensing();
         // this->TR_test_sensing();
-        this->TR_test_EKF_SLAM();
+        // this->TR_test_EKF_SLAM();
+        this->TR_test_Graph_SLAM();
     }
 };
 
@@ -320,10 +335,12 @@ struct TestWorld {
 };
 
 int main() {
-    cout << "######################## Running Tests ########################\n";
+    spdlog::set_level(spdlog::level::debug);
+    spdlog::set_pattern("[%l] [%s:%#] %v");
+    SPDLOG_DEBUG("######################## Running Tests ########################");
 
     TestRobot tr;
     tr.run_tests();
 
-    cout << "######################## All Tests Passed ########################\n";
+    SPDLOG_DEBUG("######################## Finished Tests ########################");
 }
