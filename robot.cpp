@@ -132,6 +132,25 @@ Vector3d Robot::sample_xt(Control u, Pose p) {
     return res;
 }
 
+Vector3d Robot::get_next_pose(Vector3d mu_p, Vector2d u) {
+    // calculate noise-free next pose
+    double v = u[0];
+    double w = u[1];
+    double theta = mu_p[2];
+    double v1, v2;
+    // check for 0 angular velocity
+    if (isclose(w, 0.0)) {
+        v1 = v * cos(theta) * DT;
+        v2 = v * -sin(theta) * DT;
+    } else {
+        v1 = (-v/w * sin(theta)) + (v/w * sin(theta + w * DT));
+        v2 = (v/w * cos(theta)) - (v/w * cos(theta + w * DT));
+    }
+    double v3 = w * DT;
+    Vector3d update({v1, v2, v3});
+    return update;
+}
+
 /*
 EKF SLAM per Thrun et al. 2006
 mu_p: $\mu_{t-1}$ is the state vector: $[x, y, \theta, m_{1,x}, m_{1,y}, s_1, \cdots, m_{N,x}, ,m_{N,y}, s_N]^\top$
@@ -158,8 +177,6 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     if (isclose(w, 0.0)) {
         v1 = v * cos(theta) * DT;
         v2 = v * -sin(theta) * DT;
-        // v1 = (-v * sin(theta)) + (v * sin(theta + w * DT));
-        // v2 = (v * cos(theta)) - (v * cos(theta + w * DT));
     } else {
         v1 = (-v/w * sin(theta)) + (v/w * sin(theta + w * DT));
         v2 = (v/w * cos(theta)) - (v/w * cos(theta + w * DT));
@@ -232,6 +249,35 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     // update $\mu_t = \bar{\mu}_t$ and $\Sigma_t = \bar{\Sigma}_t$
     this->state_vec = mu_bar;
     this->covariance = cov_bar;
+}
+
+std::pair<MatrixXd, MatrixXd> Graph_SLAM_linearize(VectorXd u_t, VectorXd z_t, VectorXd c_t, VectorXd mu) {
+}
+
+VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
+    VectorXd mu = Vector3d::Zero();
+    Vector3d prev = mu;
+    // for each control, use the previous pose to find next pose
+    for (int i = 0; i < u_t.size(); i+=2) {
+        Vector2d u = u_t(seq(i, i+1));
+        Vector3d mu_t = this->get_next_pose(prev, u);
+        // append this new pose to the state vector
+        mu << mu_t;
+        prev = mu_t;
+    }
+    return mu;
+}
+
+VectorXd Robot::Graph_SLAM(Vector2d u_t, VectorXd z_t, VectorXi c_t) {
+    VectorXd mu = this->Graph_SLAM_init(u_t);
+    bool convergence = false;
+    while (convergence == false) {
+        auto [omega, xi] = this->Graph_SLAM_linearize(u_t, z_t, c_t, mu);
+        auto [omega_, xi_] = this->Graph_SLAM_reduce(omega, xi);
+        auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
+        mu = mu_new;
+    }
+    return mu;
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
