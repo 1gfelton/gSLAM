@@ -260,15 +260,32 @@ struct TestRobot {
     void TR_test_Graph_SLAM() {
         SPDLOG_INFO("Testing Graph SLAM...\n");
         SPDLOG_INFO("Robot Location: {}, {}", this->r.position.x(), this->r.position.y());
+        // init landmarks
+        MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
+        landmarks *= 2.0;
+        SPDLOG_INFO("Landmarks:\n{}", to_str(landmarks));
+
+        // init correspondences
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
+        SPDLOG_INFO("Correspondences:\n{}", to_str(c));
+
         // init controls
         int n_controls = 10;
-        VectorXd controls = VectorXd::Zero(n_controls * 2);
-        controls(seq(0, last, 2)) = VectorXd::Constant(n_controls, V);
-        controls(seq(1, last, 2)) = VectorXd::Constant(n_controls, W);
-        SPDLOG_INFO("Controls:\n{}", to_str(controls));
+        VectorXd u = VectorXd::Zero(n_controls * 2);
+        u(seq(0, last, 2)) = VectorXd::Constant(n_controls, V);
+        u(seq(1, last, 2)) = VectorXd::Constant(n_controls, W);
+        SPDLOG_INFO("Controls:\n{}", to_str(u));
 
-        VectorXd mu = this->r.Graph_SLAM_init(controls);
+        // init features
+        VectorXd z = this->r.sense_env(landmarks);
+        SPDLOG_INFO("Features:\n{}", to_str(z));
+
+        // init Graph SLAM
+        VectorXd mu = this->r.Graph_SLAM_init(u);
         SPDLOG_INFO("mu:\n{}", to_str(mu));
+
+        auto [omega, xi] = this->r.Graph_SLAM_linearize(u, z, c, mu);
+        SPDLOG_INFO("Omega:\n{}\nXi:\n{}", to_str(omega), to_str(xi));
     }
 
     void run_tests() {

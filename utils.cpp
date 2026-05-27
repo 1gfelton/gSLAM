@@ -46,7 +46,3 @@ Pose make_pose(Vector3d v) {
     Vector2d vv = {v[0], v[1]};
     return Pose(vv, v[2]);
 }
-
-std::string to_str(const MatrixXd &m) {
-    std::ostringstream oss; oss << m; return oss.str();
-}

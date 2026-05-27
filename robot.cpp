@@ -3,6 +3,7 @@
 #include <fstream>
 #include <math.h>
 #include <spdlog/spdlog.h>
+#include <float.h>
 #include "robot.h"
 #include "point2d.h"
 #include "utils.h"
@@ -258,9 +259,32 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     this->covariance = cov_bar;
 }
 
-std::pair<MatrixXd, MatrixXd> Graph_SLAM_linearize(VectorXd u_t, VectorXd z_t, VectorXd c_t, VectorXd mu) {
+/*
+`u` : Sequence of controls
+`z` : Sequence of features
+`c` : Sequence of correspondences
+`mu` : State vector
+*/
+std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, VectorXd z, VectorXi c, VectorXd mu) {
+    double INF = std::numeric_limits<double>::infinity();
+    MatrixXd omega = MatrixXd(Vector3d::Constant(INF).asDiagonal());
+    MatrixXd xi;
+    SPDLOG_INFO("omega:\n{}", to_str(omega));
+    // update positions based on controls
+    for (int i = 0; i < u.size(); i+=2) {
+        Vector2d cur_control = u(seq(i, i+1));
+        Vector3d cur_pose = mu(seq(i, i + 3));
+        Vector3d x_hat = this->get_next_pose(cur_pose, cur_control);
+        MatrixXd G = MatrixXd::Identity(3, 3);
+        G.topRightCorner(2, 1) = x_hat.head(2);
+    }
+    omega.conservativeResize(3);
+    return std::make_pair(omega, xi);
 }
 
+/*
+`u_t` - a sequence of controls from timestep 0 : t
+*/
 VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%l] [%s:%#] %v");
@@ -281,15 +305,15 @@ VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
 }
 
 VectorXd Robot::Graph_SLAM(VectorXd u, VectorXd z_t, VectorXi c_t) {
-    // VectorXd mu = this->Graph_SLAM_init(u);
-    // bool convergence = false;
-    // while (convergence == false) {
-    //     auto [omega, xi] = this->Graph_SLAM_linearize(u, z_t, c_t, mu);
-    //     auto [omega_, xi_] = this->Graph_SLAM_reduce(omega, xi);
-    //     auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
-    //     mu = mu_new;
-    // }
-    // return mu;
+    VectorXd mu = this->Graph_SLAM_init(u);
+    bool convergence = false;
+    while (convergence == false) {
+        auto [omega, xi] = this->Graph_SLAM_linearize(u, z_t, c_t, mu);
+        // auto [omega_, xi_] = this->Graph_SLAM_reduce(omega, xi);
+        // auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
+        // mu = mu_new;
+    }
+    return mu;
 }
 
 double Robot::get_motion_probability(Pose x, Control u, Pose prev) {
