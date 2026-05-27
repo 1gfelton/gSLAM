@@ -276,7 +276,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, VectorXd z
         Vector3d cur_pose = mu(seq(i, i + 3));
         Vector3d x_hat = this->get_next_pose(cur_pose, cur_control);
         MatrixXd G = MatrixXd::Identity(3, 3);
-        G.topRightCorner(2, 1) = x_hat.head(2);
+        G.topRightCorner(2, 1) = x_hat.head(2); // TODO
     }
     omega.conservativeResize(3);
     return std::make_pair(omega, xi);
