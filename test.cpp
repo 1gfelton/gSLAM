@@ -270,7 +270,7 @@ struct TestRobot {
         SPDLOG_INFO("Correspondences:\n{}", to_str(c));
 
         // init controls
-        int n_controls = 10;
+        int n_controls = N_STEPS;
         VectorXd u = VectorXd::Zero(n_controls * 2);
         u(seq(0, last, 2)) = VectorXd::Constant(n_controls, V);
         u(seq(1, last, 2)) = VectorXd::Constant(n_controls, W);

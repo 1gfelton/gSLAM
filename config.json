@@ -10,12 +10,12 @@
     "THETA"         : 0.0,
     "W"             : 1.0,
     "V"             : 25.0,
-    "N_LANDMARKS"   : 5,
+    "N_LANDMARKS"   : 2,
     "SIGMA_R"       : 0.1,
     "SIGMA_PHI"     : 0.1,
     "SIGMA_S"       : 0.1,
-    "SIGMA_X"       : 0.0,
+    "SIGMA_X"       : 0.00001,
     "SIGMA_Y"       : 0.00001,
-    "SIGMA_THETA"   : 0.0,
-    "N_STEPS"       : 100
+    "SIGMA_THETA"   : 0.00001,
+    "N_STEPS"       : 5
 }
