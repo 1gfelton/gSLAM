@@ -276,7 +276,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
     MatrixXd omega = MatrixXd(Vector3d::Constant(INF).asDiagonal());
     MatrixXd xi = MatrixXd::Zero(3, 1);
     // update positions based on controls
-    for (int t = 0; t < u.size() / 2; t++) { 
+    for (int t = 0; t < N_STEPS - 1; t++) { 
         // int i = t * 2; // indexing into controls
         Vector2d cur_control = u(seq(t*2, t*2 + 1));
         Vector3d cur_pose = mu(seq(t*3, t*3 + 2));
@@ -301,16 +301,23 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
         xi.conservativeResize(xi.rows() + 3, xi.cols());
         // update t & t - 1
         xi.block(t*3, 0, 6, 1) += res1;
-        SPDLOG_INFO("xi:\n{}", to_str(xi));
+        // SPDLOG_INFO("xi:\n{}", to_str(xi));
     }
+    SPDLOG_INFO("omega after controls:\n{}", to_str(omega));
+    // resize omega to include spaces for map
+    omega.conservativeResize(omega.rows() + c.size() * 3, omega.cols() + c.size() * 3);
+    xi.conservativeResize(xi.rows() + c.size() * 3, xi.cols());
+    SPDLOG_INFO("resized omega:\n{}", to_str(omega));
     // assume z contains T many measurements and each measurement has N many features
+    // TODO: some annoying issues - since correspondences are 1 indexed, to correctly index into them we need to do (j - 1) * 3 + (N_STEPS * 3)
+    // this creates some frustrating/annoying bugs that are tricky to debug 
     for (int t = 0; t < z.size(); t++) {
         MatrixXd Q = MatrixXd(Vector3d({SIGMA_R, SIGMA_PHI, SIGMA_S}).asDiagonal());
-        SPDLOG_INFO("Q:\n{}", to_str(Q));
+        // SPDLOG_INFO("Q:\n{}", to_str(Q));
         for (int i = 0; i < c.size(); i++) {
             int j = c(i);
             // must do *3 as there as mu is a vector of triplets (x, y, theta)
-            // all this code is from EKF_SLAM
+            // update omega
             Vector2d d = mu(seq(j*3, j*3 + 1)) - mu(seq(0, 1));
             double q = d.squaredNorm();
             if (isclose(q, 0.0)) {
@@ -322,15 +329,28 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             MatrixXd H = (1 / q) * tmp; // 3 x 6
             SPDLOG_INFO("H:\n{}", to_str(H));
             // add $H_t^{i\top}Q^{-1}_tH_t^i$ to $\Omega$ at $x_t, m_j$
-            // i think the way this code runs we add this to x_t-1 and x_t?
             MatrixXd HH = H.transpose() * Q.inverse() * H;
-            SPDLOG_INFO("HH:\n{}", to_str(HH));
-            omega.block(t*3, t*3, 6, 6) += HH; // $x_t$
-            SPDLOG_INFO("omega xt:\n{}", to_str(omega));
-            // TODO: fix shape mismatch / understand how m_j values are stored in omega
-            omega.block(j*3, j*3, 6, 6) += HH; // $m_j$
-            SPDLOG_INFO("omega mj:\n{}", to_str(omega));
+            Matrix3d A = HH.block(0, 0, 3, 3);
+            Matrix3d B = HH.block(0, 3, 3, 3);
+            Matrix3d C = HH.block(3, 3, 3, 3);
+            omega.block(t*3, t*3, 3, 3) += A; // $x_t$
+            omega.block(t*3, (j-1)*3 + (N_STEPS * 3), 3, 3) += B; // $x_t$
+            omega.block((j-1)*3 + (N_STEPS * 3), (j - 1)*3 + (N_STEPS * 3), 3, 3) += C; // $m_j$
+            omega.block((j-1)*3 + (N_STEPS * 3), t*3, 3, 3) += B.transpose(); // $m_j$
+
+            // update xi
+            MatrixXd z_t = z[t](seq(i*3, i*3 + 2));
+            MatrixXd tmpv(6, 1); tmpv <<  mu(0), mu(1), mu(2), mu(j*3), mu(j*3 + 1), mu(j*3 + 2);
+            MatrixXd HZ = H.transpose() * Q.inverse() * (z_t - z_hat + (H * tmpv));
+            SPDLOG_INFO("HZ:\n{}", to_str(HZ));
+            SPDLOG_INFO("xi before:\n{}", to_str(xi));
+            xi.block(t*3, 0, 3, 1) += HZ.block(0, 0, 3, 1);
+            SPDLOG_INFO("First ok");
+            xi.block((j-1)*3 + (N_STEPS*3), 0, 3, 1) += HZ.block(3, 0, 3, 1);
+            SPDLOG_INFO("Second ok");
+            SPDLOG_INFO("xi after:\n{}", to_str(xi));
         }
+        SPDLOG_INFO("final omega:\n{}", to_str(omega));
     }
         // for all features in this measurement
     return std::make_pair(omega, xi);

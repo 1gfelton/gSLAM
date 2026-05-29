@@ -266,7 +266,7 @@ struct TestRobot {
         SPDLOG_INFO("Landmarks:\n{}", to_str(landmarks));
 
         // init correspondences
-        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS); // 1 indexed!
         SPDLOG_INFO("Correspondences:\n{}", to_str(c));
 
         // init controls

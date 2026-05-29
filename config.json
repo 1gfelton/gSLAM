@@ -17,5 +17,5 @@
     "SIGMA_X"       : 0.00001,
     "SIGMA_Y"       : 0.00001,
     "SIGMA_THETA"   : 0.00001,
-    "N_STEPS"       : 1
+    "N_STEPS"       : 2
 }
