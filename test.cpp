@@ -277,8 +277,10 @@ struct TestRobot {
         SPDLOG_INFO("Controls:\n{}", to_str(u));
 
         // init features
-        VectorXd z = this->r.sense_env(landmarks);
-        SPDLOG_INFO("Features:\n{}", to_str(z));
+        vector<VectorXd> z;
+        VectorXd z_t = this->r.sense_env(landmarks);
+        z.push_back(z_t);
+        SPDLOG_INFO("Features:\n{}", to_str(z_t));
 
         // init Graph SLAM
         VectorXd mu = this->r.Graph_SLAM_init(u);

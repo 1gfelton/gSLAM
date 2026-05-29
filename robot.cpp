@@ -261,11 +261,11 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
 
 /*
 `u` : Sequence of controls
-`z` : Sequence of features
+`z` : Set of measurements (`vector<VectorXd>` where each `VectorXd` is a measurement at timestep `t`)
 `c` : Sequence of correspondences
 `mu` : State vector
 */
-std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, VectorXd z, VectorXi c, VectorXd mu) {
+std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<VectorXd> z, VectorXi c, VectorXd mu) {
     spdlog::set_level(spdlog::level::debug);
     spdlog::set_pattern("[%l] [%s:%#] %v");
 
@@ -298,14 +298,41 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, VectorXd z
         // $\xi_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}[\hat{x}_t - G_t\mu_{t-1}]$
 
         MatrixXd res1 = G_tmp * Ri * (x_hat - G * cur_pose); // 6 x 1
-        SPDLOG_INFO("res1:\n{}", to_str(res1));
         xi.conservativeResize(xi.rows() + 3, xi.cols());
-        SPDLOG_INFO("xi:\n{}", to_str(xi));
         // update t & t - 1
         xi.block(t*3, 0, 6, 1) += res1;
         SPDLOG_INFO("xi:\n{}", to_str(xi));
     }
-    // omega.conservativeResize(omega.rows(), omega.cols() + 3);
+    // assume z contains T many measurements and each measurement has N many features
+    for (int t = 0; t < z.size(); t++) {
+        MatrixXd Q = MatrixXd(Vector3d({SIGMA_R, SIGMA_PHI, SIGMA_S}).asDiagonal());
+        SPDLOG_INFO("Q:\n{}", to_str(Q));
+        for (int i = 0; i < c.size(); i++) {
+            int j = c(i);
+            // must do *3 as there as mu is a vector of triplets (x, y, theta)
+            // all this code is from EKF_SLAM
+            Vector2d d = mu(seq(j*3, j*3 + 1)) - mu(seq(0, 1));
+            double q = d.squaredNorm();
+            if (isclose(q, 0.0)) {
+                throw std::runtime_error("q is zero - This means mu_j == mu_0 so something is wrong with your state vector.");
+            }
+            Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - mu(2), mu(j*3 + 2)};
+            MatrixXd tmp(3, 6);
+            tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
+            MatrixXd H = (1 / q) * tmp; // 3 x 6
+            SPDLOG_INFO("H:\n{}", to_str(H));
+            // add $H_t^{i\top}Q^{-1}_tH_t^i$ to $\Omega$ at $x_t, m_j$
+            // i think the way this code runs we add this to x_t-1 and x_t?
+            MatrixXd HH = H.transpose() * Q.inverse() * H;
+            SPDLOG_INFO("HH:\n{}", to_str(HH));
+            omega.block(t*3, t*3, 6, 6) += HH; // $x_t$
+            SPDLOG_INFO("omega xt:\n{}", to_str(omega));
+            // TODO: fix shape mismatch / understand how m_j values are stored in omega
+            omega.block(j*3, j*3, 6, 6) += HH; // $m_j$
+            SPDLOG_INFO("omega mj:\n{}", to_str(omega));
+        }
+    }
+        // for all features in this measurement
     return std::make_pair(omega, xi);
 }
 
@@ -327,7 +354,7 @@ VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
     return mu;
 }
 
-VectorXd Robot::Graph_SLAM(VectorXd u, VectorXd z_t, VectorXi c_t) {
+VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     VectorXd mu = this->Graph_SLAM_init(u);
     bool convergence = false;
     while (convergence == false) {

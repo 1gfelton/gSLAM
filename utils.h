@@ -18,3 +18,8 @@ template <typename Derived>
 std::string to_str(const Eigen::DenseBase<Derived> &m) {
     std::ostringstream oss; oss << m; return oss.str();
 }
+
+template <typename Derived>
+std::string shape(const Eigen::DenseBase<Derived> &m) {
+    std::ostringstream oss; oss << "[" << m.rows() << ", " << m.cols() << "]\n"; return oss.str();
+}
