@@ -272,46 +272,38 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, VectorXd z
     Matrix3d R = Matrix3d(Vector3d({SIGMA_X, SIGMA_Y, SIGMA_THETA}).asDiagonal());
     SPDLOG_INFO("R:\n{}", to_str(R));
     MatrixXd Ri = R.inverse();
-    // SPDLOG_INFO("Ri:\n{}", to_str(Ri));
     double INF = 10e10;
     MatrixXd omega = MatrixXd(Vector3d::Constant(INF).asDiagonal());
-    MatrixXd xi;
-    // SPDLOG_INFO("omega:\n{}", to_str(omega));
+    MatrixXd xi = MatrixXd::Zero(3, 1);
     // update positions based on controls
     for (int t = 0; t < u.size() / 2; t++) { 
         // int i = t * 2; // indexing into controls
         Vector2d cur_control = u(seq(t*2, t*2 + 1));
         Vector3d cur_pose = mu(seq(t*3, t*3 + 2));
         Vector3d x_hat = this->get_next_pose(cur_pose, cur_control);
-        // SPDLOG_INFO("u_t:\n{}\nx_t:\n{}\nx_hat:\n{}", to_str(cur_control), to_str(cur_pose), to_str(x_hat));
         MatrixXd G = MatrixXd::Identity(3, 3);
         G.topRightCorner(2, 1) = x_hat.head(2); // TODO
-        // SPDLOG_INFO("G:\n{}", to_str(G));
 
         // $\Omega_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}(G_t\space\space1)$
 
         MatrixXd G_tmp = MatrixXd::Zero(6, 3);
         G_tmp.block(0, 0, 3, 3) = -G.transpose();
         G_tmp.block(3, 0, 3, 3).setIdentity();
-        SPDLOG_INFO("G_tmp:\n{}", to_str(G_tmp));
 
-        MatrixXd res = G_tmp * Ri * G_tmp.transpose();
-        // SPDLOG_INFO("Res:\n{}", to_str(res));
-        // SPDLOG_INFO("Omega before:\n{}\nrows: {}, cols: {}", to_str(omega), omega.rows(), omega.cols());
+        MatrixXd res = G_tmp * Ri * G_tmp.transpose(); // 6 x 6
         omega.conservativeResize(omega.rows() + 3, omega.cols() + 3);
-        // SPDLOG_INFO("Omega Resized:\n{}", to_str(omega));
         // update t and t - 1
         omega.block(t*3, t*3, 6, 6) += res;
-        // SPDLOG_INFO("updated omega:\n{}", to_str(omega));
 
         // $\xi_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}[\hat{x}_t - G_t\mu_{t-1}]$
 
-        // MatrixXd res1 = G_tmp * Ri * (x_hat - G * cur_pose);
-        // xi.conservativeResize(xi.rows(), xi.cols() + 3);
-        // // update t - 1
-        // xi.block(0, t * 3, 3, 3) += res1;
-        // // update t
-        // xi.block(t * 3, t * 3 + 3, 3, 3) += res1;
+        MatrixXd res1 = G_tmp * Ri * (x_hat - G * cur_pose); // 6 x 1
+        SPDLOG_INFO("res1:\n{}", to_str(res1));
+        xi.conservativeResize(xi.rows() + 3, xi.cols());
+        SPDLOG_INFO("xi:\n{}", to_str(xi));
+        // update t & t - 1
+        xi.block(t*3, 0, 6, 1) += res1;
+        SPDLOG_INFO("xi:\n{}", to_str(xi));
     }
     // omega.conservativeResize(omega.rows(), omega.cols() + 3);
     return std::make_pair(omega, xi);
