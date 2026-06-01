@@ -228,7 +228,7 @@ struct TestRobot {
         MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
         landmarks *= 25.0;
         cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
-        MatrixXd features = this->r.sense_env(landmarks);
+        MatrixXd features = this->r.sense_env(landmarks, 0);
         print_features(features);
         to_csv(this->r.state_vec, "state_vector");
         print_state();
@@ -248,7 +248,7 @@ struct TestRobot {
         MatrixXd init_cov = MatrixXd::Zero(N_LANDMARKS * 3 + 3, N_LANDMARKS * 3 + 3);
         this->r.state_vec = init_state_vec; this->r.covariance = init_cov;
         for (int i = 0; i < N_STEPS; i++) {
-            MatrixXd features = this->r.sense_env(landmarks);
+            MatrixXd features = this->r.sense_env(landmarks, i);
             this->r.EKF_SLAM(this->r.state_vec, this->r.covariance, control, features, c);
             this->r.position = this->r.state_vec.head<2>();
             this->r.look_at = this->r.state_vec(2);
@@ -266,7 +266,7 @@ struct TestRobot {
         SPDLOG_INFO("Landmarks:\n{}", to_str(landmarks));
 
         // init correspondences
-        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS); // 1 indexed!
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS); 
         SPDLOG_INFO("Correspondences:\n{}", to_str(c));
 
         // init controls
@@ -278,7 +278,7 @@ struct TestRobot {
 
         // init features
         vector<VectorXd> z;
-        VectorXd z_t = this->r.sense_env(landmarks);
+        VectorXd z_t = this->r.sense_env(landmarks, 0);
         z.push_back(z_t);
         SPDLOG_INFO("Features:\n{}", to_str(z_t));
 
@@ -288,6 +288,9 @@ struct TestRobot {
 
         auto [omega, xi] = this->r.Graph_SLAM_linearize(u, z, c, mu);
         SPDLOG_INFO("Omega:\n{}\nXi:\n{}", to_str(omega), to_str(xi));
+
+        auto [omega_, xi_] = this->r.Graph_SLAM_reduce(omega, xi);
+        SPDLOG_INFO("Omega tilde:\n{}\nXi tilde:\n{}", to_str(omega_), to_str(xi_));
     }
 
     void run_tests() {

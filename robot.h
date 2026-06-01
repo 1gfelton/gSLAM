@@ -6,6 +6,7 @@
 #include "control.h"
 #include "pose.h"
 #include <vector>
+#include <map>
 #include <Eigen/Dense>
 
 /*
@@ -27,6 +28,7 @@ struct Robot{
     double look_at;
     Eigen::Vector2d position;
     std::vector<std::pair<Pose, Control>> trajectory;
+    std::map<int, std::vector<int>> observations{}; // j -> x_t (features -> pose at which feature was observed)
     Eigen::VectorXd state_vec;
     Eigen::MatrixXd covariance;
     void print() const;
@@ -40,7 +42,7 @@ struct Robot{
 
     Eigen::Vector3d get_next_pose(Eigen::Vector3d mu_p, Eigen::Vector2d u);
     Eigen::Vector3d sample_xt(Control u, Pose p);
-    Eigen::VectorXd sense_env(Eigen::MatrixXd landmarks);
+    Eigen::VectorXd sense_env(Eigen::MatrixXd landmarks, int t);
 
     Eigen::VectorXd Graph_SLAM(Eigen::VectorXd u, std::vector<Eigen::VectorXd> z_t, Eigen::VectorXi c_t);
     Eigen::VectorXd Graph_SLAM_init(Eigen::VectorXd u_t);
