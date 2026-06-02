@@ -271,6 +271,29 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
     this->covariance = cov_bar;
 }
 
+std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_solve(MatrixXd omega_, MatrixXd xi_, MatrixXd omega, MatrixXd xi) {
+    MatrixXd sigma = omega_.inverse();
+    // VectorXd mu_ = sigma * xi_;
+    VectorXd mu = sigma * xi_;
+    MatrixXd omega_inv = omega.inverse();
+    for (int j = 0; j < mu.size(); j++) {
+        VectorXd cur_feature = this->state_vec.block(j, 0, 3, 1);
+        VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
+        tau *= 3; j *= 3;
+        SPDLOG_INFO("mu:\n{}", to_str(mu));
+        SPDLOG_INFO("tau:\n{}, {}", to_str(tau), shape(tau));
+        if (tau.size()) {
+            for (const auto &pose : tau) {
+                SPDLOG_INFO("mu block:\n{}", to_str(mu.block(j, 0, 3, 1)));
+                mu.block(j, 0, 3, 1) = omega_inv(j, j) * (xi.block(j, 0, 3, 1) + omega.block(j, pose, 3, 3) * mu.block(pose, 0, 3, 1));
+                SPDLOG_INFO("mu block after:\n{}", to_str(mu.block(j, 0, 3, 1)));
+            }
+        }
+    }
+    SPDLOG_INFO("Finished solving...");
+    return std::make_pair(mu, sigma);
+}
+
 /*
 `omega` : Information matrix
 `xi` : Information vector

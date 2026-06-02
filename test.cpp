@@ -297,6 +297,9 @@ struct TestRobot {
 
         auto [omega_, xi_] = this->r.Graph_SLAM_reduce(omega, xi);
         SPDLOG_INFO("Omega tilde:\n{}\nXi tilde:\n{}", to_str(omega_), to_str(xi_));
+
+        auto [mu_, sigma_] = this->r.Graph_SLAM_solve(omega_, xi_, omega, xi);
+        SPDLOG_INFO("Mu Tilde:\n{}\nSigma Tilde:\n{}", to_str(mu_), to_str(omega_));
     }
 
     void run_tests() {
