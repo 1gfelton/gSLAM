@@ -300,6 +300,9 @@ struct TestRobot {
 
         auto [mu_, sigma_] = this->r.Graph_SLAM_solve(omega_, xi_, omega, xi);
         SPDLOG_INFO("Mu Tilde:\n{}\nSigma Tilde:\n{}", to_str(mu_), to_str(omega_));
+
+        auto final_mu = this->r.Graph_SLAM(u, z, c);
+        SPDLOG_INFO("Final Mu:\n{}", to_str(final_mu));
     }
 
     void run_tests() {

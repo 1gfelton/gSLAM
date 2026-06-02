@@ -456,11 +456,13 @@ VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
 VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     VectorXd mu = this->Graph_SLAM_init(u);
     bool convergence = false;
-    while (convergence == false) {
+    // TODO: create more intelligent way of identifying convergence
+    int j = N_STEPS;
+    while (j--) {
         auto [omega, xi] = this->Graph_SLAM_linearize(u, z_t, c_t, mu);
         auto [omega_, xi_] = this->Graph_SLAM_reduce(omega, xi);
-        // auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
-        // mu = mu_new;
+        auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
+        mu = mu_new;
     }
     return mu;
 }
