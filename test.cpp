@@ -285,6 +285,7 @@ struct TestRobot {
         // init Graph SLAM
         VectorXd mu = this->r.Graph_SLAM_init(u);
         SPDLOG_INFO("mu:\n{}", to_str(mu));
+        // TODO: concatenate landmarks to poses in mu
 
         auto [omega, xi] = this->r.Graph_SLAM_linearize(u, z, c, mu);
         SPDLOG_INFO("Omega:\n{}\nXi:\n{}", to_str(omega), to_str(xi));

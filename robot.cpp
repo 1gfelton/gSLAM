@@ -281,11 +281,18 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
         tau *= 3;
         SPDLOG_INFO("tauj:\n{}", to_str(tau));
 
-        xi_view(tau, Eigen::all) -= omega_.block(tau.size(), 0, tau, 3) * omega_.inverse().block(j*3, j*3, 3, 3) * xi(j);
-        xi_view(j, Eigen::all) -= omega_.block(tau.size(), 0, tau, 3) * omega_.inverse().block(j*3, j*3, 3, 3) * xi(j);
-        SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
-
-        omega_.block(tau.size() * 3, tau, 3, 3) -= omega_.block(tau.size(), 0, tau, 3) * omega_.inverse().block(j*3, j*3, 3, 3) * omega_.block(j * 3, tau, 3, 3);
+        for (const auto &a : tau) {
+            MatrixXd d1 = omega_.block(a, j, 3, 3) * omega_.inverse().block(j, j, 3, 3) * xi_.block(a, 0, 3, 1);
+            SPDLOG_INFO("d1:\n{}, {}", to_str(d1), shape(d1));
+            xi_view(tau, Eigen::all) -= d1.transpose();
+            SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
+            for (const auto &b : tau) {
+                auto d2 = omega_.block(a, j, 3, 3) * omega_.inverse().block(j, j, 3, 3) * omega_.block(j, b, 3, 3);
+                omega_.block(a, b, 3, 3) -= d2;
+                SPDLOG_INFO("omega_:\n{}", to_str(omega_));
+            }
+        }
+        // TODO: Debug + implement line 8 of pseudocode
         SPDLOG_INFO("omega_:\n{}", to_str(omega_));
     }
     return std::make_pair(omega_, xi_);
@@ -302,7 +309,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
     spdlog::set_pattern("[%l] [%s:%#] %v");
 
     Matrix3d R = Matrix3d(Vector3d({SIGMA_X, SIGMA_Y, SIGMA_THETA}).asDiagonal());
-    // SPDLOG_INFO("R:\n{}", to_str(R));
+    SPDLOG_INFO("R:\n{}", to_str(R));
     MatrixXd Ri = R.inverse();
     double INF = 10e10;
     MatrixXd omega = MatrixXd(Vector3d::Constant(INF).asDiagonal());
@@ -333,13 +340,13 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
         xi.conservativeResize(xi.rows() + 3, xi.cols());
         // update t & t - 1
         xi.block(t*3, 0, 6, 1) += res1;
-        // SPDLOG_INFO("xi:\n{}", to_str(xi));
+        SPDLOG_INFO("xi:\n{}", to_str(xi));
     }
-    // SPDLOG_INFO("omega after controls:\n{}", to_str(omega));
+    SPDLOG_INFO("omega after controls:\n{}", to_str(omega));
     // resize omega to include spaces for map
     omega.conservativeResize(omega.rows() + c.size() * 3, omega.cols() + c.size() * 3);
     xi.conservativeResize(xi.rows() + c.size() * 3, xi.cols());
-    // SPDLOG_INFO("resized omega:\n{}", to_str(omega));
+    SPDLOG_INFO("resized omega:\n{}", to_str(omega));
     // assume z contains T many measurements and each measurement has N many features
     // TODO: some annoying issues - since correspondences are 1 indexed, to correctly index into them we need to do (j - 1) * 3 + (N_STEPS * 3)
     // this creates some frustrating/annoying bugs that are tricky to debug 
@@ -359,7 +366,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             MatrixXd tmp(3, 6);
             tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
             MatrixXd H = (1 / q) * tmp; // 3 x 6
-            // SPDLOG_INFO("H:\n{}", to_str(H));
+            SPDLOG_INFO("H:\n{}", to_str(H));
             // add $H_t^{i\top}Q^{-1}_tH_t^i$ to $\Omega$ at $x_t, m_j$
             MatrixXd HH = H.transpose() * Q.inverse() * H;
             Matrix3d A = HH.block(0, 0, 3, 3);
@@ -374,15 +381,15 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             MatrixXd z_t = z[t](seq(i*3, i*3 + 2));
             MatrixXd tmpv(6, 1); tmpv <<  mu(0), mu(1), mu(2), mu(j*3), mu(j*3 + 1), mu(j*3 + 2);
             MatrixXd HZ = H.transpose() * Q.inverse() * (z_t - z_hat + (H * tmpv));
-            // SPDLOG_INFO("HZ:\n{}", to_str(HZ));
-            // SPDLOG_INFO("xi before:\n{}", to_str(xi));
+            SPDLOG_INFO("HZ:\n{}", to_str(HZ));
+            SPDLOG_INFO("xi before:\n{}", to_str(xi));
             xi.block(t*3, 0, 3, 1) += HZ.block(0, 0, 3, 1);
-            // SPDLOG_INFO("First ok");
+            SPDLOG_INFO("First ok");
             xi.block((j-1)*3 + (N_STEPS*3), 0, 3, 1) += HZ.block(3, 0, 3, 1);
-            // SPDLOG_INFO("Second ok");
-            // SPDLOG_INFO("xi after:\n{}", to_str(xi));
+            SPDLOG_INFO("Second ok");
+            SPDLOG_INFO("xi after:\n{}", to_str(xi));
         }
-        // SPDLOG_INFO("final omega:\n{}", to_str(omega));
+        SPDLOG_INFO("final omega:\n{}", to_str(omega));
     }
     return std::make_pair(omega, xi); // omega: 3N + N_LANDMARKS x 3N + N_LANDMARKS
 }
