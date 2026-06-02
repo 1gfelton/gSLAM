@@ -278,14 +278,19 @@ struct TestRobot {
 
         // init features
         vector<VectorXd> z;
+        SPDLOG_INFO("Sensing...");
         VectorXd z_t = this->r.sense_env(landmarks, 0);
+        SPDLOG_INFO("Returned features");
+        SPDLOG_INFO("z_t:\n{}", to_str(z_t));
         z.push_back(z_t);
-        SPDLOG_INFO("Features:\n{}", to_str(z_t));
+        SPDLOG_INFO("Features:\n{}, {}", to_str(z_t), shape(z_t));
 
         // init Graph SLAM
-        VectorXd mu = this->r.Graph_SLAM_init(u);
+        VectorXd init = r.Graph_SLAM_init(u);
+        VectorXd mu = VectorXd::Zero(init.size() + z_t.size());
+        SPDLOG_INFO("init:\n{}, {}", to_str(init), shape(init));
+        mu << this->r.Graph_SLAM_init(u), z_t;
         SPDLOG_INFO("mu:\n{}", to_str(mu));
-        // TODO: concatenate landmarks to poses in mu
 
         auto [omega, xi] = this->r.Graph_SLAM_linearize(u, z, c, mu);
         SPDLOG_INFO("Omega:\n{}\nXi:\n{}", to_str(omega), to_str(xi));
