@@ -467,18 +467,18 @@ VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     VectorXd mu = VectorXd::Zero(mu_poses.size() + N_LANDMARKS * 3);
     mu.head(mu_poses.size()) = mu_poses;
     mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0]);
-    SPDLOG_INFO("mu:\n{}", to_str(mu));
+    // SPDLOG_INFO("mu:\n{}", to_str(mu));
 
     bool convergence = false;
     // TODO: implement more intelligent way of identifying convergence
     int j = 10;
     while (j--) {
         auto [omega, xi] = this->Graph_SLAM_linearize(u, z_t, c_t, mu);
-        SPDLOG_INFO("omega:\n{}\nxi:\n{}", to_str(omega), to_str(xi));
+        // SPDLOG_INFO("omega:\n{}\nxi:\n{}", to_str(omega), to_str(xi));
         auto [omega_, xi_] = this->Graph_SLAM_reduce(omega, xi);
-        SPDLOG_INFO("omega_:\n{}\nxi_:\n{}", to_str(omega_), to_str(xi_));
+        // SPDLOG_INFO("omega_:\n{}\nxi_:\n{}", to_str(omega_), to_str(xi_));
         auto [mu_new, Sigma] = this->Graph_SLAM_solve(omega_, xi_, omega, xi);
-        SPDLOG_INFO("mu_new:\n{}\nsigma:\n{}", to_str(mu_new), to_str(Sigma));
+        // SPDLOG_INFO("mu_new:\n{}\nsigma:\n{}", to_str(mu_new), to_str(Sigma));
         mu = mu_new;
     }
     return mu;
