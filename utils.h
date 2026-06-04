@@ -13,6 +13,7 @@ std::piecewise_linear_distribution<double> triangular_distribution(double mu, do
 double sample_triangular_dist(double mu, double sigma2);
 double triangular_prob(double mu, double sigma2);
 Pose make_pose(Eigen::Vector3d v);
+Eigen::VectorXd to_cartesian(Eigen::VectorXd z);
 
 template <typename Derived>
 std::string to_str(const Eigen::DenseBase<Derived> &m) {

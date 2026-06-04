@@ -46,3 +46,17 @@ Pose make_pose(Vector3d v) {
     Vector2d vv = {v[0], v[1]};
     return Pose(vv, v[2]);
 }
+
+VectorXd to_cartesian(VectorXd z) {
+    VectorXd ans = VectorXd::Zero(z.size());
+    for (int i = 0; i < z.size(); i+= 3) {
+        double r = z(i);
+        double phi = z(i + 1);
+        double s = z(i + 2);
+
+        double x = r * cos(phi);
+        double y = r * sin(phi);
+        ans(seq(i, i + 2)) = Vector3d{x, y, s};
+    }
+    return ans;
+}

@@ -257,7 +257,7 @@ struct TestRobot {
         }
     }
 
-    void TR_test_Graph_SLAM() {
+    void TR_test_Graph_SLAM_components() {
         SPDLOG_INFO("Testing Graph SLAM...\n");
         SPDLOG_INFO("Robot Location: {}, {}", this->r.position.x(), this->r.position.y());
         // init landmarks
@@ -305,12 +305,53 @@ struct TestRobot {
         SPDLOG_INFO("Final Mu:\n{}", to_str(final_mu));
     }
 
+    void TR_test_Graph_SLAM() {
+        // init vectors
+        // landmarks
+        SPDLOG_INFO("Testing Graph SLAM...");
+        cout << "Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
+        MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
+        landmarks *= 2.0;
+        cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
+
+        // correspondences
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
+        SPDLOG_INFO("Correspondences:\n{}", to_str(c));
+
+        // controls
+        VectorXd u = VectorXd::Zero(N_STEPS * 2);
+        u(seq(0, last, 2)) = VectorXd::Constant(N_STEPS, V);
+        u(seq(1, last, 2)) = VectorXd::Constant(N_STEPS, W);
+        SPDLOG_INFO("Controls:\n{}", to_str(u));
+
+        // features
+        vector<VectorXd> z;
+        SPDLOG_INFO("Sensing...");
+        VectorXd z_t = this->r.sense_env(landmarks, 0);
+        SPDLOG_INFO("Returned features");
+        z.push_back(z_t);
+        SPDLOG_INFO("Features:\n{}, {}", to_str(z_t), shape(z_t));
+
+        for (int i = 0; i < N_STEPS; i++) {
+            VectorXd new_z = this->r.sense_env(landmarks, i);
+            z.push_back(new_z);
+            // TODO: this should be done in Graph_SLAM method
+            this->r.position = this->r.state_vec.head<2>();
+            this->r.look_at = this->r.state_vec(2);
+            // write to csv
+        }
+        VectorXd mu = this->r.Graph_SLAM(u, z, c);
+        string filename = fmt::format("graph_slam");
+        to_csv(mu, filename);
+    }
+
     void run_tests() {
         // this->TR_test_moving();
         // this->TR_test_sample_next_pose();
         // this->TR_test_sensing();
         // this->TR_test_sensing();
         // this->TR_test_EKF_SLAM();
+        // this->TR_test_Graph_SLAM_components();
         this->TR_test_Graph_SLAM();
     }
 };
