@@ -315,11 +315,12 @@ struct TestRobot {
         cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
 
         // correspondences
-        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 1, N_LANDMARKS);
+        VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 0, N_LANDMARKS - 1);
         SPDLOG_INFO("Correspondences:\n{}", to_str(c));
 
         // controls
-        VectorXd u = VectorXd::Zero(N_STEPS * 2);
+        VectorXd u = VectorXd::Zero((N_STEPS) * 2);
+        // set first values as v, second as w
         u(seq(0, last, 2)) = VectorXd::Constant(N_STEPS, V);
         u(seq(1, last, 2)) = VectorXd::Constant(N_STEPS, W);
         SPDLOG_INFO("Controls:\n{}", to_str(u));
@@ -338,6 +339,7 @@ struct TestRobot {
             // TODO: this should be done in Graph_SLAM method
             this->r.position = this->r.state_vec.head<2>();
             this->r.look_at = this->r.state_vec(2);
+            SPDLOG_INFO("Going into SLAM...");
             VectorXd mu = this->r.Graph_SLAM(u, z, c);
             // write to csv
         }

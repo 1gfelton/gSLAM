@@ -274,13 +274,14 @@ void Robot::EKF_SLAM(VectorXd mu_p, MatrixXd cov_p, Vector2d u_t, VectorXd z_t, 
 std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_solve(MatrixXd omega_, MatrixXd xi_, MatrixXd omega, MatrixXd xi) {
     MatrixXd sigma = omega_.inverse();
     // VectorXd mu_ = sigma * xi_;
-    VectorXd mu = VectorXd::Zero(N_STEPS * 3 + N_LANDMARKS * 3);
-    mu.head(N_STEPS * 3) = sigma * xi_;
+    VectorXd mu = VectorXd::Zero(N_POSES * 3 + N_LANDMARKS * 3);
+    mu.head(N_POSES * 3) = sigma * xi_;
+    SPDLOG_INFO("mu:{}", shape(mu));
 
     for (int j = 0; j < N_LANDMARKS; j++) {
         VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
         tau *= 3; 
-        int jx = (j * 3) + (N_STEPS * 3);
+        int jx = (j * 3) + (N_POSES * 3);
         MatrixXd omega_inv_j = omega.block(jx, jx, 3, 3).inverse();
         // SPDLOG_INFO("mu:\n{}", to_str(mu));
         // SPDLOG_INFO("tau:\n{}, {}", to_str(tau), shape(tau));
@@ -315,7 +316,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
         VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
         tau *= 3;
         SPDLOG_INFO("tauj:\n{}", to_str(tau));
-        int jx = N_STEPS * 3 + j * 3;
+        int jx = N_POSES * 3 + j * 3;
 
         MatrixXd omega_inv_j = omega_.block(jx, jx, 3, 3).inverse();
         SPDLOG_INFO("omega_inv_j:\n{}", to_str(omega_inv_j));
@@ -323,18 +324,18 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
             // xi
             // subtract from tau(j)
             xi_.block(pose, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-            SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
+            SPDLOG_INFO("new xi_:\n{}", shape(xi_));
             // subtract from m_j
             xi_.block(jx, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-            SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
+            // SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
 
             // omega
             // subtract from tau(j)
             omega_.block(pose, jx, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
-            SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
+            SPDLOG_INFO("new omega_:\n{}", shape(omega_));
             // subtract from m_j
             omega_.block(jx, pose, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
-            SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
+            // SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
         }
         // for (const auto &a : tau) {
         //     MatrixXd d1 = omega_.block(a, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
@@ -350,9 +351,9 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
         // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
     }
     // remove all landmarks from omega, xi 
-    MatrixXd final_omega = omega_.block(0, 0, N_STEPS * 3, N_STEPS * 3);
+    MatrixXd final_omega = omega_.block(0, 0, N_POSES * 3, N_POSES * 3);
     // SPDLOG_INFO("final omega:\n{}", to_str(final_omega));
-    MatrixXd final_xi = xi_.block(0, 0, N_STEPS * 3, 1);
+    MatrixXd final_xi = xi_.block(0, 0, N_POSES * 3, 1);
     // SPDLOG_INFO("final xi:\n{}", to_str(final_xi));
     return std::make_pair(final_omega, final_xi);
 }
@@ -367,16 +368,17 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
     spdlog::set_pattern("[%l] [%s:%#] %v");
 
     Matrix3d R = Matrix3d(Vector3d({SIGMA_X, SIGMA_Y, SIGMA_THETA}).asDiagonal());
-    // SPDLOG_INFO("R:\n{}", to_str(R));
+    SPDLOG_INFO("R:\n{}", to_str(R));
     MatrixXd Ri = R.inverse();
     double INF = 10e10;
     MatrixXd omega = MatrixXd(Vector3d::Constant(INF).asDiagonal());
     MatrixXd xi = MatrixXd::Zero(3, 1);
     // update positions based on controls
-    for (int t = 0; t < N_STEPS - 1; t++) { 
-        // int i = t * 2; // indexing into controls
+    for (int t = 0; t < u.size() / 2; t++) { 
+        SPDLOG_INFO("t:{}", t);
+        int cur = t*2;
         // create $G_t$
-        Vector2d cur_control = u(seq(t*2, t*2 + 1));
+        Vector2d cur_control = u(seq(cur, cur + 1));
         Vector3d cur_pose = mu(seq(t*3, t*3 + 2));
         double v = cur_control(0);
         double w = cur_control(1);
@@ -392,14 +394,18 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
 
         // $\Omega_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}(G_t\space\space1)$
 
+        SPDLOG_INFO("G:\n{}", to_str(G));
         MatrixXd G_tmp = MatrixXd::Zero(6, 3);
         G_tmp.block(0, 0, 3, 3) = -G.transpose();
         G_tmp.block(3, 0, 3, 3).setIdentity();
+        SPDLOG_INFO("G_tmp:\n{}", to_str(G_tmp));
 
         MatrixXd res = G_tmp * Ri * G_tmp.transpose(); // 6 x 6
         omega.conservativeResizeLike(MatrixXd::Zero(omega.rows() + 3, omega.cols() + 3));
+        SPDLOG_INFO("omega:\n{}", shape(omega));
         // update t and t - 1
         omega.block(t*3, t*3, 6, 6) += res;
+        SPDLOG_INFO("omega:\n{}", shape(omega));
 
         // $\xi_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}[\hat{x}_t - G_t\mu_{t-1}]$
 
@@ -407,30 +413,33 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
         xi.conservativeResizeLike(MatrixXd::Zero(xi.rows() + 3, xi.cols()));
         // update t & t - 1
         xi.block(t*3, 0, 6, 1) += res1;
-        // SPDLOG_INFO("xi:\n{}", to_str(xi));
+        SPDLOG_INFO("xi:\n{}", shape(xi));
     }
-    // SPDLOG_INFO("omega after controls:\n{}", to_str(omega));
     // resize omega to include spaces for map
-    omega.conservativeResizeLike(MatrixXd::Zero(omega.rows() + c.size() * 3, omega.cols() + c.size() * 3));
-    xi.conservativeResizeLike(MatrixXd::Zero(xi.rows() + c.size() * 3, xi.cols()));
+    SPDLOG_INFO("omega after controls:\n{}\nshape:{}", to_str(omega), shape(omega));
+    omega.conservativeResizeLike(MatrixXd::Zero(omega.rows() + N_LANDMARKS * 3, omega.cols() + N_LANDMARKS * 3));
+    xi.conservativeResizeLike(MatrixXd::Zero(xi.rows() + N_LANDMARKS * 3, xi.cols()));
+    SPDLOG_INFO("reshaped omega:\n{}\nshape: {}", to_str(omega), shape(omega));
     // SPDLOG_INFO("resized omega:\n{}", to_str(omega));
     // assume z contains T many measurements and each measurement has N many features
-    // TODO: some annoying issues - since correspondences are 1 indexed, to correctly index into them we need to do (j - 1) * 3 + (N_STEPS * 3)
+    // TODO: some annoying issues - since correspondences are 1 indexed, to correctly index into them we need to do (j) * 3 + (N_POSES * 3)
     // this creates some frustrating/annoying bugs that are tricky to debug 
     MatrixXd Q_inv = MatrixXd(Vector3d({SIGMA_R, SIGMA_PHI, SIGMA_S}).asDiagonal()).inverse();
     for (int t = 0; t < z.size(); t++) {
         // // SPDLOG_INFO("Q:\n{}", to_str(Q));
         for (int i = 0; i < c.size(); i++) {
-            int j = c(i);
+            int j = (c(i) * 3) + (N_POSES * 3);
             // must do *3 as there as mu is a vector of triplets (x, y, theta)
             // update omega
-            Vector2d d = mu(seq(j*3, j*3 + 1)) - mu(seq(0, 1));
-            double q = d.squaredNorm();
+            SPDLOG_INFO("mu:\n{}\n{}j:{}, t:{}", to_str(mu), shape(mu), j, t);
+            Vector2d d = mu.block(j, 0, 2, 1) - mu.block(t*3, 0, 2, 1);
+            SPDLOG_INFO("d:\n{}", to_str(d));
+            double q = d.transpose() * d;
             if (isclose(q, 0.0)) {
                 throw std::runtime_error("q is zero - This means mu_j == mu_0 so something is wrong with your state vector.");
             }
 
-            Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - mu(2), mu(j*3 + 2)};
+            Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - mu(2), mu(j + 2)};
             MatrixXd tmp(3, 6);
             tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
             MatrixXd H = (1 / q) * tmp; // 3 x 6
@@ -442,20 +451,21 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             Matrix3d B = HH.block(0, 3, 3, 3);
             Matrix3d Bt = HH.block(3, 0, 3, 3);
             Matrix3d C = HH.block(3, 3, 3, 3);
+            SPDLOG_INFO("omega:\n{}j:{}, t:{}", shape(omega), j, t);
             omega.block(t*3, t*3, 3, 3) += A; // $x_t$
-            omega.block(t*3, (j-1)*3 + (N_STEPS * 3), 3, 3) += B; // $x_t$
-            omega.block((j-1)*3 + (N_STEPS * 3), (j - 1)*3 + (N_STEPS * 3), 3, 3) += C; // $m_j$
-            omega.block((j-1)*3 + (N_STEPS * 3), t*3, 3, 3) += Bt; // $m_j$
+            omega.block(t*3, j, 3, 3) += B; // $x_t$
+            omega.block(j, j, 3, 3) += C; // $m_j$
+            omega.block(j, t*3, 3, 3) += Bt; // $m_j$
 
             // update xi
             MatrixXd z_t = z[t](seq(i*3, i*3 + 2));
-            MatrixXd tmpv(6, 1); tmpv <<  mu(0), mu(1), mu(2), mu(j*3), mu(j*3 + 1), mu(j*3 + 2);
+            MatrixXd tmpv(6, 1); tmpv <<  mu(0), mu(1), mu(2), mu(j), mu(j + 1), mu(j + 2);
             MatrixXd HZ = H.transpose() * Q_inv * (z_t - z_hat + (H * tmpv));
             // SPDLOG_INFO("HZ:\n{}", to_str(HZ));
             // SPDLOG_INFO("xi before:\n{}", to_str(xi));
             xi.block(t*3, 0, 3, 1) += HZ.block(0, 0, 3, 1);
             // SPDLOG_INFO("First ok");
-            xi.block((j-1)*3 + (N_STEPS*3), 0, 3, 1) += HZ.block(3, 0, 3, 1);
+            xi.block(j, 0, 3, 1) += HZ.block(3, 0, 3, 1);
             // SPDLOG_INFO("Second ok");
             // SPDLOG_INFO("xi after:\n{}", to_str(xi));
         }
@@ -485,10 +495,12 @@ VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
 
 VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     VectorXd mu_poses = this->Graph_SLAM_init(u);
+    SPDLOG_INFO("Succesfully initialized mu");
+    // add features to mu
     VectorXd mu = VectorXd::Zero(mu_poses.size() + N_LANDMARKS * 3);
     mu.head(mu_poses.size()) = mu_poses;
     mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0]);
-    // SPDLOG_INFO("mu:\n{}", to_str(mu));
+    SPDLOG_INFO("mu in cartesian:\n{}", to_str(mu));
 
     int j = 4;
     while (j--) {
