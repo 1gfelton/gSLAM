@@ -119,7 +119,7 @@ void printj(Robot r) {
     cout << endl;
 }
 
-void to_csv(VectorXd v, string file) {
+void to_csv(MatrixXd v, string file) {
     cout << "Writing to csv file " << file + ".csv..." << endl;
     string filename = "./csvs/" + file + ".csv";
     std::ofstream out(filename, std::ofstream::trunc);
@@ -338,11 +338,14 @@ struct TestRobot {
             // TODO: this should be done in Graph_SLAM method
             this->r.position = this->r.state_vec.head<2>();
             this->r.look_at = this->r.state_vec(2);
+            VectorXd mu = this->r.Graph_SLAM(u, z, c);
             // write to csv
         }
         VectorXd mu = this->r.Graph_SLAM(u, z, c);
-        string filename = fmt::format("graph_slam");
-        to_csv(mu, filename);
+        string filename1 = fmt::format("graph_slam");
+        string filename2 = fmt::format("graph_slam_gt");
+        to_csv(mu, filename1);
+        to_csv(landmarks, filename2);
     }
 
     void run_tests() {

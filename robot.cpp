@@ -277,17 +277,17 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_solve(MatrixXd omega_, MatrixXd 
     VectorXd mu = VectorXd::Zero(N_STEPS * 3 + N_LANDMARKS * 3);
     mu.head(N_STEPS * 3) = sigma * xi_;
 
-    MatrixXd omega_inv = omega.inverse();
     for (int j = 0; j < N_LANDMARKS; j++) {
         VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
         tau *= 3; 
         int jx = (j * 3) + (N_STEPS * 3);
+        MatrixXd omega_inv_j = omega.block(jx, jx, 3, 3).inverse();
         // SPDLOG_INFO("mu:\n{}", to_str(mu));
         // SPDLOG_INFO("tau:\n{}, {}", to_str(tau), shape(tau));
         if (tau.size()) {
             for (const auto &pose : tau) {
                 // SPDLOG_INFO("mu block:\n{}", to_str(mu.block(jx, 0, 3, 1)));
-                mu.block(jx, 0, 3, 1) = omega_inv.block(jx, jx, 3, 3) * (xi.block(jx, 0, 3, 1) + omega.block(jx, pose, 3, 3) * mu.block(pose, 0, 3, 1));
+                mu.block(jx, 0, 3, 1) = omega_inv_j * (xi.block(jx, 0, 3, 1) + omega.block(jx, pose, 3, 3) * mu.block(pose, 0, 3, 1));
                 // SPDLOG_INFO("mu block after:\n{}", to_str(mu.block(jx, 0, 3, 1)));
             }
         }
@@ -306,28 +306,47 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
     MatrixXd xi_ = xi;
     // SPDLOG_INFO("state_vec:\n{}", to_str(this->state_vec));
     MatrixXd state = this->state_vec.reshaped(this->state_vec.size()/3, 3);
-    MatrixXd xi_view = xi_.reshaped(xi_.size() / 3, 3);
     // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
     // SPDLOG_INFO("State:\n{}", to_str(state));
+
+    // this loop guard is equivalent to j < N_STEPS
     for (int j = 0; j < (this->state_vec.size() - 3) / 3; j++) {
         // $\tau(j)$ is the set of all poses at which $j$ was observed
         VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
         tau *= 3;
-        // SPDLOG_INFO("tauj:\n{}", to_str(tau));
+        SPDLOG_INFO("tauj:\n{}", to_str(tau));
         int jx = N_STEPS * 3 + j * 3;
 
         MatrixXd omega_inv_j = omega_.block(jx, jx, 3, 3).inverse();
-        for (const auto &a : tau) {
-            MatrixXd d1 = omega_.block(a, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-            // SPDLOG_INFO("d1:\n{}, {}", to_str(d1), shape(d1));
-            xi_.block(a, 0, 3, 1) -= d1;
-            // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
-            for (const auto &b : tau) {
-                // SPDLOG_INFO("d2:\n{}", to_str(d2));
-                omega_.block(a, b, 3, 3) -= omega_.block(a, jx, 3, 3) * omega_inv_j * omega_.block(jx, b, 3, 3);
-                // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
-            }
+        SPDLOG_INFO("omega_inv_j:\n{}", to_str(omega_inv_j));
+        for (const auto &pose : tau) {
+            // xi
+            // subtract from tau(j)
+            xi_.block(pose, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
+            SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
+            // subtract from m_j
+            xi_.block(jx, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
+            SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
+
+            // omega
+            // subtract from tau(j)
+            omega_.block(pose, jx, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
+            SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
+            // subtract from m_j
+            omega_.block(jx, pose, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
+            SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
         }
+        // for (const auto &a : tau) {
+        //     MatrixXd d1 = omega_.block(a, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
+        //     // SPDLOG_INFO("d1:\n{}, {}", to_str(d1), shape(d1));
+        //     xi_.block(a, 0, 3, 1) -= d1;
+        //     // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
+        //     for (const auto &b : tau) {
+        //         // SPDLOG_INFO("d2:\n{}", to_str(d2));
+        //         omega_.block(a, b, 3, 3) -= omega_.block(a, jx, 3, 3) * omega_inv_j * omega_.block(jx, b, 3, 3);
+        //         // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
+        //     }
+        // }
         // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
     }
     // remove all landmarks from omega, xi 
@@ -369,7 +388,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             dg << -v/w * cos(cur_pose(2)) + v/w * cos(cur_pose(2) + w * DT), -v/w * sin(cur_pose(2)) + v/w * sin(cur_pose(2) + w * DT);
         }
         MatrixXd G = MatrixXd::Identity(3, 3);
-        G.topRightCorner(2, 1) = dg.head(2); // TODO
+        G.topRightCorner(2, 1) = dg.head(2);
 
         // $\Omega_{x_t, x_{t-1}} \mathrel{+}= \begin{pmatrix}-G^\top_t \\ 1\end{pmatrix}R_t^{-1}(G_t\space\space1)$
 
@@ -415,16 +434,18 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
             MatrixXd tmp(3, 6);
             tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
             MatrixXd H = (1 / q) * tmp; // 3 x 6
-            // SPDLOG_INFO("H:\n{}", to_str(H));
+            SPDLOG_INFO("H:\n{}", to_str(H));
             // add $H_t^{i\top}Q^{-1}_tH_t^i$ to $\Omega$ at $x_t, m_j$
             MatrixXd HH = H.transpose() * Q_inv * H;
+            SPDLOG_INFO("HH:\n{}", to_str(HH));
             Matrix3d A = HH.block(0, 0, 3, 3);
             Matrix3d B = HH.block(0, 3, 3, 3);
+            Matrix3d Bt = HH.block(3, 0, 3, 3);
             Matrix3d C = HH.block(3, 3, 3, 3);
             omega.block(t*3, t*3, 3, 3) += A; // $x_t$
             omega.block(t*3, (j-1)*3 + (N_STEPS * 3), 3, 3) += B; // $x_t$
             omega.block((j-1)*3 + (N_STEPS * 3), (j - 1)*3 + (N_STEPS * 3), 3, 3) += C; // $m_j$
-            omega.block((j-1)*3 + (N_STEPS * 3), t*3, 3, 3) += B.transpose(); // $m_j$
+            omega.block((j-1)*3 + (N_STEPS * 3), t*3, 3, 3) += Bt; // $m_j$
 
             // update xi
             MatrixXd z_t = z[t](seq(i*3, i*3 + 2));
@@ -469,9 +490,7 @@ VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0]);
     // SPDLOG_INFO("mu:\n{}", to_str(mu));
 
-    bool convergence = false;
-    // TODO: implement more intelligent way of identifying convergence
-    int j = 10;
+    int j = 4;
     while (j--) {
         auto [omega, xi] = this->Graph_SLAM_linearize(u, z_t, c_t, mu);
         // SPDLOG_INFO("omega:\n{}\nxi:\n{}", to_str(omega), to_str(xi));
