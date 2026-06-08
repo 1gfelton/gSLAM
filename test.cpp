@@ -351,24 +351,21 @@ struct TestRobot {
         z.push_back(z_t);
         SPDLOG_INFO("Features:\n{}, {}", to_str(z_t), shape(z_t));
 
-        VectorXd mu;
+        // gather sensor readings for each timestep
         for (int i = 0; i < N_STEPS; i++) {
             VectorXd new_z = this->r.sense_env(landmarks, i);
             z.push_back(new_z);
-            // TODO: this should be done in Graph_SLAM method
-            this->r.position = this->r.state_vec.head<2>();
-            this->r.look_at = this->r.state_vec(2);
-            SPDLOG_INFO("Going into SLAM...");
-            mu = this->r.Graph_SLAM(u, z, c);
         }
+
+        // SLAM
+        SPDLOG_INFO("Going into SLAM...");
+        VectorXd mu = this->r.Graph_SLAM(u, z, c);
         SPDLOG_INFO("GT:\n{}\nPredicted:\n{}", to_str(landmarks), to_str(mu));
-        // VectorXd mu = this->r.Graph_SLAM(u, z, c);
 
         // write to csv
         string filename1 = fmt::format("graph_slam");
         string filename2 = fmt::format("graph_slam_gt");
         to_csv(mu, filename1);
-        // auto tr = landmarks.transpose();
         SPDLOG_INFO("Tranposed:\n{}", to_str(landmarks.transpose()));
         _to_csv(landmarks.transpose(), filename2);
     }

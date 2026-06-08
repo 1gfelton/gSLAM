@@ -486,8 +486,16 @@ VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     // add features to mu
     VectorXd mu = VectorXd::Zero(mu_poses.size() + N_LANDMARKS * 3);
     mu.head(mu_poses.size()) = mu_poses;
-    mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0], this->position);
+    mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0], Vector3d::Zero());
     SPDLOG_INFO("mu in cartesian:\n{}", to_str(mu));
+
+    // reset observations
+    this->observations.clear();
+    for (int t = 0; t < z_t.size(); t++) {
+        for (int i = 0; i < c_t.size(); i++) {
+            this->observations[c_t(i)].push_back(t);
+        }
+    }
 
     int j = 4;
     while (j--) {
