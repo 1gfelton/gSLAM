@@ -57,20 +57,21 @@ $\alpha_n$ is an accuracy parameter that measures the error of the robot. the la
 Essentially you have the robot pose `[0:2]` and all of the features `[3:N*3]`
 updates `Robot->state_vec` to be a `VectorXd`
 */
-void Robot::update_state_vec(MatrixXd features) {
+void Robot::init_state_vec(MatrixXd features) {
     // N + 3
     VectorXd state = VectorXd::Zero(features.size() + 3);
-    // cout << "[robot.cpp]Robot location: " << this->position.x() << ", " << this->position.y() << std::endl;
+    SPDLOG_TRACE("Init state vec:\n{}", to_str(state));
     double x = this->position.x();
     double y = this->position.y();
-    // SPDLOG_INFO("Robot location: ({}, {})", x, y);
     // init x, y, theta
-    state(0) = this->position.x(); state(1) = this->position.y(); state(2) = this->look_at;
+    // state(0) = this->position.x(); state(1) = this->position.y(); state(2) = this->look_at;
     for (int i = 0; i < features.cols(); i++) {
         for (int j = 0; j < 3; j++) {
             state[i * 3 + j + 3] = features(j, i);
+            SPDLOG_TRACE("updated state vec:\n{}", to_str(state));
         }
     }
+    SPDLOG_TRACE("final init state vec:\n{}", to_str(state));
     this->state_vec = state;
 }
 
@@ -85,7 +86,7 @@ VectorXd Robot::sense_env(MatrixXd landmarks, int t) {
     // 3 x N
     MatrixXd features(3, N_LANDMARKS);
     for (int i = 0; i < N_LANDMARKS; i++) {
-        cout << "Landmark:\tx: " << landmarks(0, i) << ",y: " << landmarks(1, i) << std::endl;
+        // cout << "Landmark:\tx: " << landmarks(0, i) << ",y: " << landmarks(1, i) << std::endl;
         this->observations[i].push_back(t); // mark at which timestep feature was observed
         double dx = landmarks(0, i) - this->position.x();
         double dy = landmarks(1, i) - this->position.y();
@@ -93,12 +94,13 @@ VectorXd Robot::sense_env(MatrixXd landmarks, int t) {
         double r = sqrt(dx*dx + dy*dy);
         double phi = atan2(dy, dx); // in radians
         double s = landmarks(0, i); // signature can be x value for now
-        cout << "Feature:\tr: " << r << ",phi: " << phi << ",s: " << s << std::endl;
+        // cout << "Feature:\tr: " << r << ",phi: " << phi << ",s: " << s << std::endl;
 
         features(0, i) = r;
         features(1, i) = phi;
         features(2, i) = s;
     }
+    SPDLOG_TRACE("Features:\n{}", to_str(features));
     /* TODO: uncomment noise from sensor reading */
     // 3 x N
     // MatrixXd noise = Eigen::MatrixXd::Random(features.rows(), features.cols());
@@ -107,8 +109,10 @@ VectorXd Robot::sense_env(MatrixXd landmarks, int t) {
     // convert the matrix 3 x N to vector of size 3N
     // VectorXd v = Eigen::Map<Eigen::VectorXd>(ans.data(), ans.size());
     // return v;
-    this->update_state_vec(features);
-    // SPDLOG_INFO("Features:\n{}, {}", to_str(features), shape(features));
+    if (this->state_vec.isZero(0)) {
+        SPDLOG_TRACE("State vec is zero, initializing...");
+        this->init_state_vec(features);
+    }
     return features.reshaped(features.size(), 1);
 }
 
@@ -152,7 +156,7 @@ calculates an ideal (noise-free) next pose (helper to replace re-computation of 
 */
 Vector3d Robot::get_next_pose(Vector3d mu_p, Vector2d u) {
     spdlog::set_level(spdlog::level::debug);
-    spdlog::set_pattern("[%l] [%s:%#] %v");
+    spdlog::set_pattern("[%l] [%s:%#] [%!] %v");
 
     double v = u[0];
     double w = u[1];
@@ -310,44 +314,24 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_reduce(MatrixXd omega, MatrixXd 
     // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
     // SPDLOG_INFO("State:\n{}", to_str(state));
 
-    // this loop guard is equivalent to j < N_STEPS
-    for (int j = 0; j < (this->state_vec.size() - 3) / 3; j++) {
+    for (int j = 0; j < N_LANDMARKS; j++) {
         // $\tau(j)$ is the set of all poses at which $j$ was observed
         VectorXi tau = Eigen::Map<VectorXi>(this->observations[j].data(), this->observations[j].size());
         tau *= 3;
-        SPDLOG_INFO("tauj:\n{}", to_str(tau));
         int jx = N_POSES * 3 + j * 3;
 
         MatrixXd omega_inv_j = omega_.block(jx, jx, 3, 3).inverse();
-        SPDLOG_INFO("omega_inv_j:\n{}", to_str(omega_inv_j));
-        for (const auto &pose : tau) {
-            // xi
-            // subtract from tau(j)
-            xi_.block(pose, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-            SPDLOG_INFO("new xi_:\n{}", shape(xi_));
-            // subtract from m_j
-            xi_.block(jx, 0, 3, 1) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-            // SPDLOG_INFO("new xi_:\n{}", to_str(xi_));
-
-            // omega
-            // subtract from tau(j)
-            omega_.block(pose, jx, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
-            SPDLOG_INFO("new omega_:\n{}", shape(omega_));
-            // subtract from m_j
-            omega_.block(jx, pose, 3, 3) -= omega_.block(pose, jx, 3, 3) * omega_inv_j * omega_.block(jx, pose, 3, 3);
-            // SPDLOG_INFO("new omega_:\n{}", to_str(omega_));
+        for (const auto &a : tau) {
+            MatrixXd d1 = omega_.block(a, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
+            // SPDLOG_INFO("d1:\n{}, {}", to_str(d1), shape(d1));
+            xi_.block(a, 0, 3, 1) -= d1;
+            // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
+            for (const auto &b : tau) {
+                // SPDLOG_INFO("d2:\n{}", to_str(d2));
+                omega_.block(a, b, 3, 3) -= omega_.block(a, jx, 3, 3) * omega_inv_j * omega_.block(jx, b, 3, 3);
+                // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
+            }
         }
-        // for (const auto &a : tau) {
-        //     MatrixXd d1 = omega_.block(a, jx, 3, 3) * omega_inv_j * xi_.block(jx, 0, 3, 1);
-        //     // SPDLOG_INFO("d1:\n{}, {}", to_str(d1), shape(d1));
-        //     xi_.block(a, 0, 3, 1) -= d1;
-        //     // SPDLOG_INFO("xi_view:\n{}", to_str(xi_view));
-        //     for (const auto &b : tau) {
-        //         // SPDLOG_INFO("d2:\n{}", to_str(d2));
-        //         omega_.block(a, b, 3, 3) -= omega_.block(a, jx, 3, 3) * omega_inv_j * omega_.block(jx, b, 3, 3);
-        //         // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
-        //     }
-        // }
         // SPDLOG_INFO("omega_:\n{}", to_str(omega_));
     }
     // remove all landmarks from omega, xi 
@@ -439,7 +423,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
                 throw std::runtime_error("q is zero - This means mu_j == mu_0 so something is wrong with your state vector.");
             }
 
-            Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - mu(2), mu(j + 2)};
+            Vector3d z_hat{sqrt(q), atan2(d(1), d(0)) - mu(t*3+2), mu(j + 2)};
             MatrixXd tmp(3, 6);
             tmp << -sqrt(q) * d.x(), -sqrt(q) * d.y(), 0, sqrt(q) * d.x(), sqrt(q) * d.y(), 0, d.y(), -d.x(), -q, -d.y(), d.x(), 0, 0, 0, 0, 0, 0, q;
             MatrixXd H = (1 / q) * tmp; // 3 x 6
@@ -459,7 +443,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
 
             // update xi
             MatrixXd z_t = z[t](seq(i*3, i*3 + 2));
-            MatrixXd tmpv(6, 1); tmpv <<  mu(0), mu(1), mu(2), mu(j), mu(j + 1), mu(j + 2);
+            MatrixXd tmpv(6, 1); tmpv <<  mu(t*3), mu(t*3 + 1), mu(t*3 + 2), mu(j), mu(j + 1), mu(j + 2);
             MatrixXd HZ = H.transpose() * Q_inv * (z_t - z_hat + (H * tmpv));
             // SPDLOG_INFO("HZ:\n{}", to_str(HZ));
             // SPDLOG_INFO("xi before:\n{}", to_str(xi));
@@ -479,6 +463,7 @@ std::pair<MatrixXd, MatrixXd> Robot::Graph_SLAM_linearize(VectorXd u, vector<Vec
 returns `mu`, a `VectorXd` of triplets where each triplet corresponds to a pose at `x_t`
 */
 VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
+    SPDLOG_TRACE("Building mu...");
     VectorXd mu = Vector3d::Zero();
     Vector3d prev = mu;
     // for each control, use the previous pose to find next pose
@@ -487,9 +472,11 @@ VectorXd Robot::Graph_SLAM_init(VectorXd u_t) {
         Vector3d mu_t = this->get_next_pose(prev, u);
         // append this new pose to the state vector
         mu.conservativeResizeLike(VectorXd::Zero(mu.size() + 3));
+        SPDLOG_TRACE("Resized mu:\n{}", to_str(mu));
         mu.tail(3) = mu_t;
         prev = mu_t;
     }
+    SPDLOG_TRACE("Initialized mu:\n{}", to_str(mu));
     return mu;
 }
 
@@ -499,7 +486,7 @@ VectorXd Robot::Graph_SLAM(VectorXd u, vector<VectorXd> z_t, VectorXi c_t) {
     // add features to mu
     VectorXd mu = VectorXd::Zero(mu_poses.size() + N_LANDMARKS * 3);
     mu.head(mu_poses.size()) = mu_poses;
-    mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0]);
+    mu.tail(N_LANDMARKS * 3) = to_cartesian(z_t[0], this->position);
     SPDLOG_INFO("mu in cartesian:\n{}", to_str(mu));
 
     int j = 4;

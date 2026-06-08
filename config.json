@@ -14,8 +14,8 @@
     "SIGMA_R"       : 0.1,
     "SIGMA_PHI"     : 0.1,
     "SIGMA_S"       : 0.1,
-    "SIGMA_X"       : 1.0,
-    "SIGMA_Y"       : 1.0,
-    "SIGMA_THETA"   : 1.0,
-    "N_STEPS"       : 50
+    "SIGMA_X"       : 0.001,
+    "SIGMA_Y"       : 0.001,
+    "SIGMA_THETA"   : 0.001,
+    "N_STEPS"       : 10
 }

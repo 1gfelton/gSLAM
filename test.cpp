@@ -119,6 +119,21 @@ void printj(Robot r) {
     cout << endl;
 }
 
+template <typename T> 
+void _to_csv(const Eigen::DenseBase<T> &v, string file) {
+    cout << "Writing to csv file " << file + ".csv..." << endl;
+    string filename = "./csvs/" + file + ".csv";
+    std::ofstream out(filename, std::ofstream::trunc);
+    for (int i = 0; i < v.rows(); i++) {
+        for (int j = 0; j < v.cols(); j++) {
+            out << v(i,j) << ',';
+        }
+        out << ",\n";
+    }
+    out.close();
+    cout << "Wrote " << v.size()/3 << " lines to " << file + ".csv..." << endl;
+}
+
 void to_csv(MatrixXd v, string file) {
     cout << "Writing to csv file " << file + ".csv..." << endl;
     string filename = "./csvs/" + file + ".csv";
@@ -306,13 +321,13 @@ struct TestRobot {
     }
 
     void TR_test_Graph_SLAM() {
+        SPDLOG_INFO("Testing Graph SLAM...");
+        SPDLOG_TRACE("Robot location: {}, {}", this->r.position.x(), this->r.position.y());
         // init vectors
         // landmarks
-        SPDLOG_INFO("Testing Graph SLAM...");
-        cout << "Robot location: " << this->r.position.x() << ", " << this->r.position.y() << endl;
-        MatrixXd landmarks = MatrixXd::Random(3, N_LANDMARKS);
+        MatrixXd landmarks = MatrixXd::Random(2, N_LANDMARKS);
         landmarks *= 2.0;
-        cout << "Landmarks size: " << landmarks.rows() << ", " << landmarks.cols() << endl;
+        SPDLOG_TRACE("Landmarks:\n{}, shape: {}", to_str(landmarks), size(landmarks));
 
         // correspondences
         VectorXi c = VectorXi::LinSpaced(N_LANDMARKS, 0, N_LANDMARKS - 1);
@@ -328,11 +343,15 @@ struct TestRobot {
         // features
         vector<VectorXd> z;
         SPDLOG_INFO("Sensing...");
+        SPDLOG_TRACE("State vec before sensing:\n{}", to_str(this->r.state_vec));
         VectorXd z_t = this->r.sense_env(landmarks, 0);
-        SPDLOG_INFO("Returned features");
+        SPDLOG_INFO("Position: {}, {}", this->r.position.x(), this->r.position.y());
+        SPDLOG_INFO("GT:\n{}\nSensed:\n{}", to_str(landmarks), to_str(to_cartesian(z_t, this->r.position)));
+        // SPDLOG_TRACE("State vec:\n{}", to_str(this->r.state_vec));
         z.push_back(z_t);
         SPDLOG_INFO("Features:\n{}, {}", to_str(z_t), shape(z_t));
 
+        VectorXd mu;
         for (int i = 0; i < N_STEPS; i++) {
             VectorXd new_z = this->r.sense_env(landmarks, i);
             z.push_back(new_z);
@@ -340,14 +359,18 @@ struct TestRobot {
             this->r.position = this->r.state_vec.head<2>();
             this->r.look_at = this->r.state_vec(2);
             SPDLOG_INFO("Going into SLAM...");
-            VectorXd mu = this->r.Graph_SLAM(u, z, c);
-            // write to csv
+            mu = this->r.Graph_SLAM(u, z, c);
         }
-        VectorXd mu = this->r.Graph_SLAM(u, z, c);
+        SPDLOG_INFO("GT:\n{}\nPredicted:\n{}", to_str(landmarks), to_str(mu));
+        // VectorXd mu = this->r.Graph_SLAM(u, z, c);
+
+        // write to csv
         string filename1 = fmt::format("graph_slam");
         string filename2 = fmt::format("graph_slam_gt");
         to_csv(mu, filename1);
-        to_csv(landmarks, filename2);
+        // auto tr = landmarks.transpose();
+        SPDLOG_INFO("Tranposed:\n{}", to_str(landmarks.transpose()));
+        _to_csv(landmarks.transpose(), filename2);
     }
 
     void run_tests() {
@@ -415,8 +438,8 @@ struct TestWorld {
 };
 
 int main() {
-    spdlog::set_level(spdlog::level::debug);
-    spdlog::set_pattern("[%l] [%s:%#] %v");
+    spdlog::set_level(spdlog::level::trace);
+    spdlog::set_pattern("[%l] [%s:%#] [%!] %v");
     SPDLOG_DEBUG("######################## Running Tests ########################");
 
     TestRobot tr;

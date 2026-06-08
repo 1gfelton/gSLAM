@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -I /usr/include/eigen3 -I .
+CXXFLAGS = -std=c++17 -I /usr/include/eigen3 -I . -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE
 LIBS = -lfmt -lspdlog
 
 SRCS = control.cpp pose.cpp world.cpp utils.cpp test.cpp robot.cpp landmark.cpp point2d.cpp

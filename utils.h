@@ -24,3 +24,17 @@ template <typename Derived>
 std::string shape(const Eigen::DenseBase<Derived> &m) {
     std::ostringstream oss; oss << "[" << m.rows() << ", " << m.cols() << "]\n"; return oss.str();
 }
+template <typename Derived1, typename Derived2>
+Eigen::VectorXd to_cartesian(const Eigen::DenseBase<Derived1> &z, const Eigen::DenseBase<Derived2> &pos) {
+    Eigen::VectorXd ans = Eigen::VectorXd::Zero(z.size());
+    for (int i = 0; i < z.size(); i+= 3) {
+        double r = z(i);
+        double phi = z(i + 1);
+        double s = z(i + 2);
+
+        double x = pos(0) + r * cos(phi);
+        double y = pos(1) + r * sin(phi);
+        ans(Eigen::seq(i, i + 2)) = Eigen::Vector3d{x, y, s};
+    }
+    return ans; 
+}

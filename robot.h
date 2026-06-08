@@ -34,7 +34,7 @@ struct Robot{
     void print() const;
 
     void EKF_SLAM(Eigen::VectorXd mu_p, Eigen::MatrixXd cov_p, Eigen::Vector2d u_t, Eigen::VectorXd z_t, Eigen::VectorXi c_t);
-    void update_state_vec(Eigen::MatrixXd features);
+    void init_state_vec(Eigen::MatrixXd features);
     void look_to(Point2d point);
     void move_to_new_pose(Pose p, Control u);
     void generate_lerp_trajectory(Point2d start, Point2d end, int n_steps);
